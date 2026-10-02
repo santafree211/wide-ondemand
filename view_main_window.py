@@ -174,6 +174,11 @@ class MainWindow(tk.Tk):
         # 次回チェック (2.5秒間隔)
         self.after(2500, self._check_external_updates)
 
+    def _build_tabs(self):
+        """タブ統合（Notebook）"""
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+
         # タブ1: 展開＆メガバッチ実行
         self.tab_expand = ExpandTab(
             self.notebook,
