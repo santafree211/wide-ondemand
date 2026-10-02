@@ -19,8 +19,11 @@
 ================================================================================
 """
 
+import csv
+import os
 import tkinter as tk
-from tkinter import ttk
+from datetime import datetime
+from tkinter import ttk, messagebox, filedialog
 from service_data_manager import DataManager
 
 class DatabaseTab(ttk.Frame):
@@ -62,8 +65,11 @@ class DatabaseTab(ttk.Frame):
         self.lbl_result_count = ttk.Label(toolbar, text="一致: 0件")
         self.lbl_result_count.pack(side=tk.LEFT)
 
+        btn_export = ttk.Button(toolbar, text="💾 絞り込み結果をCSV保存", command=self._export_csv_as)
+        btn_export.pack(side=tk.RIGHT, padx=4)
+
         btn_reload = ttk.Button(toolbar, text="🔄 最新状態に更新", command=self.reload_data)
-        btn_reload.pack(side=tk.RIGHT)
+        btn_reload.pack(side=tk.RIGHT, padx=4)
 
         # 3. データベース一覧テーブル
         table_frame = ttk.Frame(self, padding=8)
@@ -160,3 +166,46 @@ class DatabaseTab(ttk.Frame):
             count += 1
 
         self.lbl_result_count.config(text=f"一致: {count} 件 / 総数: {len(self.db_items)} 件")
+
+    def _export_csv_as(self):
+        """検索・絞り込み中の一覧データを名前を付けてCSV保存"""
+        items_to_export = []
+        for child in self.tree.get_children():
+            vals = self.tree.item(child, "values")
+            if vals:
+                items_to_export.append(vals)
+
+        if not items_to_export:
+            messagebox.showwarning("警告", "エクスポート対象のデータがありません。")
+            return
+
+        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        q = self.var_search.get().strip()
+        suffix = f"_{q}" if q else ""
+        default_name = f"database_export{suffix}_{now_str}.csv"
+
+        save_path = filedialog.asksaveasfilename(
+            title="データベース検索結果のエクスポート",
+            initialfile=default_name,
+            defaultextension=".csv",
+            filetypes=[("CSVファイル (*.csv)", "*.csv"), ("すべてのファイル (*.*)", "*.*")]
+        )
+
+        if not save_path:
+            return
+
+        try:
+            with open(save_path, "w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["星評価", "キーワード", "月間検索Vol", "難易度(SD)", "登録元シード", "展開種別", "最終照合日時"])
+                for row in items_to_export:
+                    writer.writerow(row)
+
+            res = messagebox.askyesno(
+                "エクスポート完了",
+                f"CSVファイルを保存しました:\n{save_path}\n\n今すぐこのファイルを開きますか？"
+            )
+            if res:
+                os.startfile(save_path)
+        except Exception as e:
+            messagebox.showerror("エラー", f"CSV保存に失敗しました: {e}")

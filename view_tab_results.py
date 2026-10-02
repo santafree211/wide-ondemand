@@ -18,10 +18,12 @@
 ================================================================================
 """
 
+import csv
 import os
 import subprocess
 import tkinter as tk
-from tkinter import ttk, messagebox
+from datetime import datetime
+from tkinter import ttk, messagebox, filedialog
 from core_config import FILE_KEYWORDS_CSV, DIR_REPORTS
 from service_data_manager import DataManager
 
@@ -55,10 +57,13 @@ class ResultsTab(ttk.Frame):
         self.lbl_stats.pack(side=tk.LEFT)
 
         # 右側アクションボタン
-        btn_open_csv = ttk.Button(toolbar, text="Excel/CSVを開く", command=self._open_csv)
+        btn_export_csv = ttk.Button(toolbar, text="💾 CSVエクスポート(保存)", command=self._export_csv_as)
+        btn_export_csv.pack(side=tk.RIGHT, padx=4)
+
+        btn_open_csv = ttk.Button(toolbar, text="📊 Excel/CSVを開く", command=self._open_csv)
         btn_open_csv.pack(side=tk.RIGHT, padx=4)
 
-        btn_open_report = ttk.Button(toolbar, text="最新レポート(MD)を開く", command=self._open_latest_report)
+        btn_open_report = ttk.Button(toolbar, text="📄 最新MDを開く", command=self._open_latest_report)
         btn_open_report.pack(side=tk.RIGHT, padx=4)
 
         btn_reload = ttk.Button(toolbar, text="🔄 再読み込み", command=self.reload_results)
@@ -180,6 +185,49 @@ class ResultsTab(ttk.Frame):
             desc = "・ 要注意 / 見送り: 難易度が高いか、需要が極めて少ない、またはAPI上限で未取得のキーワードです。"
 
         self.lbl_detail_desc.config(text=desc)
+
+    def _export_csv_as(self):
+        """現在表示されているテーブル内容を名前を付けてCSV保存"""
+        items_to_export = []
+        for child in self.tree.get_children():
+            vals = self.tree.item(child, "values")
+            if vals:
+                items_to_export.append(vals)
+
+        if not items_to_export:
+            messagebox.showwarning("警告", "エクスポート対象のデータがありません。")
+            return
+
+        now_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"keywords_export_{now_str}.csv"
+
+        save_path = filedialog.asksaveasfilename(
+            title="CSVエクスポート（名前を付けて保存）",
+            initialfile=default_name,
+            defaultextension=".csv",
+            filetypes=[("CSVファイル (*.csv)", "*.csv"), ("すべてのファイル (*.*)", "*.*")]
+        )
+
+        if not save_path:
+            return
+
+        try:
+            # Excelで日本語が文字化けしないよう utf-8-sig (BOM付きUTF-8) で書き出し
+            with open(save_path, "w", encoding="utf-8-sig", newline="") as f:
+                writer = csv.writer(f)
+                # ヘッダー
+                writer.writerow(["判定(星)", "キーワード", "展開種別", "月間検索Vol", "SEO難易度(SD)", "登録元シード", "取得日時"])
+                for row in items_to_export:
+                    writer.writerow(row)
+
+            res = messagebox.askyesno(
+                "エクスポート完了",
+                f"CSVファイルを保存しました:\n{save_path}\n\n今すぐこのファイルを開きますか？"
+            )
+            if res:
+                os.startfile(save_path)
+        except Exception as e:
+            messagebox.showerror("エラー", f"CSV保存に失敗しました: {e}")
 
     def _open_csv(self):
         """keywords.csv をOSのデフォルトアプリで開く"""
