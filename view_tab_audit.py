@@ -98,15 +98,24 @@ class AuditTab(ttk.Frame):
 
         # 最新順に並び替え
         for idx, item in enumerate(reversed(self.archive_items)):
-            ts = item.get("timestamp", "-")
+            # created_at または timestamp
+            ts = item.get("created_at") or item.get("timestamp") or "-"
             ep = item.get("endpoint", "match_keywords")
-            params = item.get("params", {})
-            kw_list = params.get("keywords", [])
-            terms_cnt = len(kw_list) if isinstance(kw_list, list) else 1
 
+            # 語句数の判定 (target_key の空白区切り語数、または params.keywords)
+            t_key = item.get("target_key", "")
+            if t_key:
+                terms_cnt = len(t_key.split())
+            else:
+                params = item.get("params", {})
+                kw_list = params.get("keywords", [])
+                terms_cnt = len(kw_list) if isinstance(kw_list, list) else 1
+
+            # ステータス判定
+            resp_str = str(item.get("response", ""))
             status = "SUCCESS"
-            if item.get("error"):
-                status = "ERROR"
+            if item.get("error") or "Error:" in resp_str or "HTTP 403" in resp_str or "HTTP 429" in resp_str or "isError\":true" in resp_str:
+                status = "EXHAUSTED / ERROR"
 
             self.tree.insert("", tk.END, iid=str(idx), values=(
                 ts,

@@ -122,8 +122,25 @@ class ResultsTab(ttk.Frame):
         self.lbl_detail_desc.pack(anchor=tk.W, pady=(2, 0))
 
     def reload_results(self):
-        """データベース＆レポートから最新データを読み込み更新"""
-        self.all_items = DataManager.load_keywords_db()
+        """最新レポートおよびデータベースからデータを読み込み更新"""
+        # 1. まず直近のレポート（今回のリサーチ結果）を優先取得
+        latest_report_items = DataManager.load_latest_report_keywords()
+        db_items = DataManager.load_keywords_db()
+
+        if latest_report_items:
+            # 最新レポートのキーワードをベースにしつつ、DBにデータがあれば補完
+            kw_map = {it.get("keyword"): it for it in db_items}
+            combined = []
+            for r_item in latest_report_items:
+                kw = r_item.get("keyword")
+                if kw in kw_map and kw_map[kw].get("volume") is not None:
+                    combined.append(kw_map[kw])
+                else:
+                    combined.append(r_item)
+            self.all_items = combined
+        else:
+            self.all_items = db_items
+
         self._apply_filter()
 
     def _apply_filter(self):

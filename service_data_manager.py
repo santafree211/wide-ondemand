@@ -23,6 +23,7 @@
 import os
 import json
 import glob
+from datetime import datetime
 from typing import Dict, List, Any, Optional
 from core_config import (
     FILE_KEYWORDS_DB,
@@ -63,12 +64,27 @@ class DataManager:
 
     @staticmethod
     def load_raw_archive() -> List[Dict[str, Any]]:
-        """Tier 1: raw_api_archive.json を読み込み、API監査履歴を返す"""
+        """Tier 1: raw_api_archive.json を読み込み、API監査履歴を返す（ネスト構造も自動平坦化）"""
         if not os.path.exists(FILE_RAW_ARCHIVE):
             return []
         try:
             with open(FILE_RAW_ARCHIVE, "r", encoding="utf-8-sig") as f:
-                return json.load(f)
+                data = json.load(f)
+
+            # PowerShellの再帰シリアライズで "value": [...] がネストしている場合の再帰的平坦化
+            flat_items = []
+            def _flatten(node):
+                if isinstance(node, list):
+                    for elem in node:
+                        _flatten(elem)
+                elif isinstance(node, dict):
+                    if "value" in node and isinstance(node["value"], (list, dict)):
+                        _flatten(node["value"])
+                    if "id" in node and "endpoint" in node:
+                        flat_items.append(node)
+
+            _flatten(data)
+            return flat_items
         except Exception as e:
             log_error(f"Failed to load raw_api_archive.json: {e}")
             return []
@@ -133,3 +149,44 @@ class DataManager:
         except Exception as e:
             log_error(f"Failed to read latest report: {e}")
             return None
+
+    @staticmethod
+    def load_latest_report_keywords() -> List[Dict[str, Any]]:
+        """最新のMarkdownレポートから展開された全キーワードを抽出する"""
+        latest = DataManager.get_latest_report()
+        if not latest or not latest.get("content"):
+            return []
+
+        results = []
+        in_table = False
+        lines = latest["content"].splitlines()
+        for line in lines:
+            line = line.strip()
+            if line.startswith("## 4. リサーチ結果テーブル"):
+                in_table = True
+                continue
+            if in_table and line.startswith("## "):
+                break
+            if in_table and line.startswith("|") and not line.startswith("| :---") and not line.startswith("| 判定"):
+                parts = [p.strip() for p in line.split("|")]
+                # [ '', star, kw, typeLabel, vol, sd, intent, '' ]
+                if len(parts) >= 6:
+                    star = parts[1]
+                    kw = parts[2]
+                    t_lbl = parts[3]
+                    vol_s = parts[4]
+                    sd_s = parts[5]
+                    vol = int(vol_s.replace(",", "")) if vol_s.isdigit() else None
+                    sd = int(sd_s) if sd_s.isdigit() else None
+
+                    results.append({
+                        "star_rating": star,
+                        "keyword": kw,
+                        "expansion_type": t_lbl,
+                        "volume": vol,
+                        "sd": sd,
+                        "seed_keyword": latest["file_name"].replace("report_", "").replace(".md", ""),
+                        "updated_at": datetime.fromtimestamp(latest["modified_time"]).strftime("%Y-%m-%d %H:%M:%S")
+                    })
+
+        return results
