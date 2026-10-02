@@ -20,7 +20,9 @@
 ================================================================================
 """
 
+import os
 import sys
+import glob
 import tkinter as tk
 from tkinter import ttk, messagebox
 from core_config import (
@@ -32,6 +34,8 @@ from core_config import (
     COLOR_IDLE_FG,
     COLOR_RUNNING_BG,
     COLOR_RUNNING_FG,
+    FILE_KEYWORDS_DB,
+    DIR_REPORTS,
 )
 from view_tab_expand import ExpandTab
 from view_tab_results import ResultsTab
@@ -47,6 +51,10 @@ class MainWindow(tk.Tk):
         self.geometry(WINDOW_SIZE)
         self.minsize(*WINDOW_MIN_SIZE)
 
+        self._last_db_mtime = 0.0
+        self._last_report_mtime = 0.0
+        self._is_watcher_running = True
+
         self.style = ttk.Style(self)
         try:
             self.style.theme_use(DEFAULT_THEME)
@@ -55,6 +63,7 @@ class MainWindow(tk.Tk):
 
         self._build_header()
         self._build_tabs()
+        self._init_file_watcher()
 
         self.protocol("WM_DELETE_WINDOW", self._on_closing)
 
@@ -83,9 +92,24 @@ class MainWindow(tk.Tk):
         )
         lbl_sub.pack(side=tk.LEFT, padx=(4, 0))
 
-        # 右側: 稼働ステータスバッジ
+        # 右側: 自動同期バッジ & 稼働ステータスバッジ
+        right_box = ttk.Frame(header_frame)
+        right_box.pack(side=tk.RIGHT)
+
+        self.lbl_sync_badge = tk.Label(
+            right_box,
+            text="🔄 自動同期: ON",
+            font=("Segoe UI", 9, "bold"),
+            bg="#f0fdf4",
+            fg="#16a34a",
+            padx=8,
+            pady=4,
+            relief=tk.FLAT
+        )
+        self.lbl_sync_badge.pack(side=tk.LEFT, padx=(0, 6))
+
         self.lbl_status_badge = tk.Label(
-            header_frame,
+            right_box,
             text="● 待機中 (IDLE)",
             font=("Segoe UI", 9, "bold"),
             bg=COLOR_IDLE_BG,
@@ -94,16 +118,61 @@ class MainWindow(tk.Tk):
             pady=4,
             relief=tk.FLAT
         )
-        self.lbl_status_badge.pack(side=tk.RIGHT)
+        self.lbl_status_badge.pack(side=tk.LEFT)
 
         # 区切り線
         sep = ttk.Separator(self, orient=tk.HORIZONTAL)
         sep.pack(fill=tk.X, padx=8, pady=(4, 0))
 
-    def _build_tabs(self):
-        """タブ統合（Notebook）"""
-        self.notebook = ttk.Notebook(self)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+    def _init_file_watcher(self):
+        """wideデータストアの変更を監視し、外部更新時に自動リフレッシュ"""
+        if os.path.exists(FILE_KEYWORDS_DB):
+            self._last_db_mtime = os.path.getmtime(FILE_KEYWORDS_DB)
+
+        self._last_report_mtime = self._get_latest_report_mtime()
+        self.after(2500, self._check_external_updates)
+
+    def _get_latest_report_mtime(self) -> float:
+        if not os.path.exists(DIR_REPORTS):
+            return 0.0
+        md_files = glob.glob(os.path.join(DIR_REPORTS, "*.md"))
+        if not md_files:
+            return 0.0
+        return max(os.path.getmtime(p) for p in md_files)
+
+    def _check_external_updates(self):
+        """定期ポーリングによるデータ自動同期チェック"""
+        if not self._is_watcher_running:
+            return
+
+        need_refresh = False
+
+        # 1. keywords_db.json の更新チェック
+        if os.path.exists(FILE_KEYWORDS_DB):
+            curr_db_mtime = os.path.getmtime(FILE_KEYWORDS_DB)
+            if curr_db_mtime > self._last_db_mtime:
+                self._last_db_mtime = curr_db_mtime
+                need_refresh = True
+
+        # 2. reports/ 配下の更新チェック
+        curr_rep_mtime = self._get_latest_report_mtime()
+        if curr_rep_mtime > self._last_report_mtime:
+            self._last_report_mtime = curr_rep_mtime
+            need_refresh = True
+
+        # 外部で更新があった場合、UIを実行中でなければ自動リフレッシュ
+        if need_refresh and not self.tab_expand.runner.is_running:
+            self.lbl_sync_badge.config(text="⚡ 同期反映中...", bg="#fef3c7", fg="#d97706")
+            try:
+                self.tab_results.reload_results()
+                self.tab_database.reload_data()
+                self.tab_audit.reload_logs()
+            except Exception:
+                pass
+            self.after(1000, lambda: self.lbl_sync_badge.config(text="🔄 自動同期: ON", bg="#f0fdf4", fg="#16a34a"))
+
+        # 次回チェック (2.5秒間隔)
+        self.after(2500, self._check_external_updates)
 
         # タブ1: 展開＆メガバッチ実行
         self.tab_expand = ExpandTab(
@@ -155,6 +224,7 @@ class MainWindow(tk.Tk):
 
     def _on_closing(self):
         """ウィンドウを閉じる際の終了処理"""
+        self._is_watcher_running = False
         if self.tab_expand.runner.is_running:
             if not messagebox.askyesno("終了確認", "現在リサーチパイプラインが実行中です。強制終了して閉じますか？"):
                 return
