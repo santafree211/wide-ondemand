@@ -70,20 +70,20 @@ class ExpandTab(ttk.Frame):
         seed_row = ttk.Frame(seed_group)
         seed_row.pack(fill=tk.X)
 
-        self.var_seed = tk.StringVar(value="はちみつレモン 体に悪い")
+        self.var_seed = tk.StringVar(value="おもちゃ サブスク")
         self.entry_seed = ttk.Entry(seed_row, textvariable=self.var_seed, font=("Segoe UI", 10, "bold"))
         self.entry_seed.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
         self.entry_seed.bind("<KeyRelease>", lambda e: self._on_seed_changed())
 
-        btn_parse = ttk.Button(seed_row, text="構文解析 (分解)", command=self._parse_syntax)
+        btn_parse = ttk.Button(seed_row, text="構文解析 (分解＆候補生成)", command=self._parse_syntax)
         btn_parse.pack(side=tk.RIGHT)
 
         # 構文解析スロット表示バッジ
         slot_row = ttk.Frame(seed_group)
         slot_row.pack(fill=tk.X, pady=(6, 0))
-        self.lbl_slot_a = ttk.Label(slot_row, text="[A] スロット: はちみつレモン", foreground="#1e40af", font=("Segoe UI", 9, "bold"))
+        self.lbl_slot_a = ttk.Label(slot_row, text="[A] スロット: おもちゃ", foreground="#1e40af", font=("Segoe UI", 9, "bold"))
         self.lbl_slot_a.pack(side=tk.LEFT, padx=(0, 16))
-        self.lbl_slot_b = ttk.Label(slot_row, text="[B] スロット: 体に悪い", foreground="#991b1b", font=("Segoe UI", 9, "bold"))
+        self.lbl_slot_b = ttk.Label(slot_row, text="[B] スロット: サブスク", foreground="#991b1b", font=("Segoe UI", 9, "bold"))
         self.lbl_slot_b.pack(side=tk.LEFT)
 
         # 2. 前後2大固定軸 展開入力
@@ -112,17 +112,15 @@ class ExpandTab(ttk.Frame):
         self.txt_axis2.pack(fill=tk.BOTH, expand=True, pady=(2, 0))
         self.txt_axis2.bind("<KeyRelease>", lambda e: self._update_threshold_meter())
 
-        # サンプル語句の初期投入
-        default_axis1 = "太る\n効果\n作り方\nカビ\n毎日\n賞味期限\n妊娠中\n保存容器\n白湯\nクエン酸\n効能"
-        default_axis2 = "レモン水\nリンゴ酢\nトマトジュース\n豆乳\nプロテイン\n炭酸水\n白湯\nお茶\nコーヒー\n緑茶\n青汁"
-        self.txt_axis1.insert("1.0", default_axis1)
-        self.txt_axis2.insert("1.0", default_axis2)
+        # サンプル語句の初期投入 (おもちゃ サブスク または デフォルト)
+        self.txt_axis1.insert("1.0", "知育\nレンタル\n買取\n収納\n人気\n年齢別\n片付け\n手作り\n消毒\nプレゼント\n赤ちゃん")
+        self.txt_axis2.insert("1.0", "絵本\n洋服\n家具\n知育玩具\n花\nコーヒー\nお菓子\n家電\n音楽\nゲーム\n服")
 
         # 補助ボタンバー
         aux_row = ttk.Frame(axes_group)
         aux_row.pack(fill=tk.X, pady=(6, 0))
-        btn_sample = ttk.Button(aux_row, text="テンプレート再挿入", command=self._reset_sample_terms)
-        btn_sample.pack(side=tk.LEFT)
+        btn_auto = ttk.Button(aux_row, text="💡 シードに沿った候補を自動生成", command=self._auto_populate_expansion)
+        btn_auto.pack(side=tk.LEFT)
         btn_clear = ttk.Button(aux_row, text="入力クリア", command=self._clear_axes)
         btn_clear.pack(side=tk.LEFT, padx=6)
 
@@ -215,7 +213,7 @@ class ExpandTab(ttk.Frame):
         self._update_threshold_meter()
 
     def _parse_syntax(self):
-        """シードをスロット [A] と [B] に分割"""
+        """シードをスロット [A] と [B] に分割し、シードに応じた候補を自動生成"""
         seed = self.var_seed.get().strip()
         parts = seed.split()
         if len(parts) >= 2:
@@ -232,6 +230,57 @@ class ExpandTab(ttk.Frame):
         self.lbl_slot_b.config(text=f"[B] スロット: {slot_b}")
         self.lbl_axis1_title.config(text=f"軸①: [{slot_a}] 〇〇 (前置固定)")
         self.lbl_axis2_title.config(text=f"軸②: 〇〇 [{slot_b}] (後置固定)")
+        self._auto_populate_expansion()
+
+    def _auto_populate_expansion(self):
+        """シードキーワードの文脈に沿った展開候補を自動提案・挿入"""
+        seed = self.var_seed.get().strip()
+        parts = seed.split()
+        slot_a = parts[0] if len(parts) > 0 else ""
+        slot_b = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+        # 1. 既知シードの特化辞書
+        templates = {
+            "おもちゃ サブスク": (
+                ["知育", "レンタル", "買取", "収納", "人気", "年齢別", "片付け", "手作り", "消毒", "プレゼント", "赤ちゃん"],
+                ["絵本", "洋服", "家具", "知育玩具", "花", "コーヒー", "お菓子", "家電", "音楽", "ゲーム", "服"]
+            ),
+            "はちみつレモン 体に悪い": (
+                ["太る", "効果", "作り方", "カビ", "毎日", "賞味期限", "妊娠中", "保存容器", "白湯", "クエン酸", "効能"],
+                ["レモン水", "リンゴ酢", "トマトジュース", "豆乳", "プロテイン", "炭酸水", "白湯", "お茶", "コーヒー", "緑茶", "青汁"]
+            ),
+            "自己肯定感 低い": (
+                ["診断", "高める", "上げる", "特徴", "毒親", "原因", "チェック", "子供", "恋愛", "仕事", "トレーニング"],
+                ["自己効力感", "自尊心", "コミュ力", "精神年齢", "語彙力", "集中力", "幸福度", "意欲", "感受性", "免疫力", "運動神経"]
+            ),
+            "履歴書 セリア": (
+                ["ダイソー", "コンビニ", "書き方", "写真", "サイズ", "パート", "バイト", "志望動機", "自己PR", "封筒", "用紙"],
+                ["職務経歴書", "封筒", "印鑑", "白封筒", "クリアファイル", "朱肉", "修正テープ", "のり", "ペン", "証明写真", "ファイル"]
+            )
+        }
+
+        if seed in templates:
+            a1, a2 = templates[seed]
+        else:
+            # 汎用展開ロジック (シードの意味に合わせたインテリジェント展開)
+            a1 = ["おすすめ", "人気", "評判", "口コミ", "比較", "選び方", "使い方", "料金", "メリット", "デメリット", "ランキング"]
+            # スロットBに応じた展開
+            if "サブスク" in slot_b:
+                a2 = ["絵本", "おもちゃ", "洋服", "家具", "花", "コーヒー", "知育玩具", "家電", "服", "お菓子", "本"]
+            elif "悪い" in slot_b or "危険" in slot_b:
+                a2 = ["豆乳", "トマトジュース", "リンゴ酢", "レモン水", "炭酸水", "プロテイン", "白湯", "お茶", "コーヒー", "牛乳", "緑茶"]
+            elif "低い" in slot_b or "高い" in slot_b:
+                a2 = ["自己効力感", "自尊心", "コミュ力", "精神年齢", "幸福度", "集中力", "意欲", "語彙力", "自己肯定感", "知能", "感受性"]
+            elif "セリア" in slot_b or "ダイソー" in slot_b:
+                a2 = ["職務経歴書", "封筒", "印鑑", "クリアファイル", "白封筒", "履歴書", "文房具", "ノート", "ファイル", "ペン", "修正テープ"]
+            else:
+                a2 = ["人気", "おすすめ", "安い", "コスパ", "定番", "最新", "プロ", "初心者", "店舗", "通販", "専門店"]
+
+        self.txt_axis1.delete("1.0", tk.END)
+        self.txt_axis1.insert("1.0", "\n".join(a1))
+        self.txt_axis2.delete("1.0", tk.END)
+        self.txt_axis2.insert("1.0", "\n".join(a2))
+        self._update_threshold_meter()
 
     def _get_terms(self, text_widget: tk.Text):
         """テキストウィジェットから空行を除いたリストを取得"""
@@ -369,6 +418,8 @@ class ExpandTab(ttk.Frame):
         payload = {
             "seed_keyword": seed,
             "seed_keywords": [s for s in [slot_a, slot_b] if s],
+            "axis1_terms": axis1_terms,
+            "axis2_terms": axis2_terms,
             "keywords": sorted(list(all_kw_set))
         }
 
