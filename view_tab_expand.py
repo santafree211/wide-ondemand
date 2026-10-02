@@ -41,6 +41,7 @@ from core_config import (
 )
 from core_logger import log_info, log_warn
 from service_runner import ProcessRunner
+from service_data_manager import DataManager
 
 class ExpandTab(ttk.Frame):
     """キーワード展開＆メガバッチ実行タブ"""

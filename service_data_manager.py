@@ -38,6 +38,123 @@ class DataManager:
     """wideデータストア読み込み＆サマリー集計クラス"""
 
     @staticmethod
+    def check_ubersuggest_auth_status() -> Dict[str, Any]:
+        """Ubersuggestの認証トークン検出状態および直近のクォータ状況を検査"""
+        user_home = os.environ.get("USERPROFILE", "")
+        candidate_tokens = [
+            os.path.join(user_home, ".gemini", "antigravity", "mcp_oauth_tokens.json"),
+            os.path.join(user_home, ".gemini", "antigravity-cli", "mcp_oauth_tokens.json")
+        ]
+        candidate_configs = [
+            os.path.join(user_home, ".gemini", "antigravity", "mcp_config.json"),
+            os.path.join(user_home, ".gemini", "config", "mcp_config.json"),
+            os.path.join(user_home, ".gemini", "antigravity-cli", "mcp_config.json")
+        ]
+
+        token_found = False
+        token_preview = ""
+        source_file = ""
+
+        # 1. トークンファイルの走査
+        for tf in candidate_tokens:
+            if os.path.exists(tf):
+                try:
+                    with open(tf, "r", encoding="utf-8-sig") as f:
+                        data = json.load(f)
+                    if isinstance(data, dict):
+                        if data.get("access_token"):
+                            token_found = True
+                            token_preview = str(data["access_token"])[:8] + "..."
+                            source_file = os.path.basename(tf)
+                            break
+                        for k, v in data.items():
+                            if isinstance(v, dict):
+                                if v.get("token") and isinstance(v["token"], dict) and v["token"].get("access_token"):
+                                    token_found = True
+                                    token_preview = str(v["token"]["access_token"])[:8] + "..."
+                                    source_file = os.path.basename(tf)
+                                    break
+                                elif v.get("access_token"):
+                                    token_found = True
+                                    token_preview = str(v["access_token"])[:8] + "..."
+                                    source_file = os.path.basename(tf)
+                                    break
+                    if token_found:
+                        break
+                except Exception:
+                    pass
+
+        # 2. config ファイルの走査 (Authorization ヘッダー)
+        if not token_found:
+            for cf in candidate_configs:
+                if os.path.exists(cf):
+                    try:
+                        with open(cf, "r", encoding="utf-8-sig") as f:
+                            cfg = json.load(f)
+                        uber = cfg.get("mcpServers", {}).get("ubersuggest", {})
+                        auth_hdr = uber.get("headers", {}).get("Authorization", "")
+                        if auth_hdr:
+                            token_found = True
+                            tok = auth_hdr.replace("Bearer ", "").strip()
+                            token_preview = tok[:8] + "..."
+                            source_file = os.path.basename(cf)
+                            break
+                    except Exception:
+                        pass
+
+        # 3. 直近のAPIアーカイブからクォータ枯渇状況を検知
+        quota_status = "NORMAL"
+        quota_msg = "認証済み (利用可能)"
+        archives = DataManager.load_raw_archive()
+        if archives:
+            latest_arc = archives[-1]
+            resp_str = str(latest_arc.get("response", ""))
+            if "daily reports limit" in resp_str or "HTTP 403" in resp_str:
+                quota_status = "EXHAUSTED"
+                quota_msg = "無料枠上限(100回/日) 到達中"
+            elif "HTTP 429" in resp_str or "Rate limited" in resp_str:
+                quota_status = "RATE_LIMITED"
+                quota_msg = "レート制限中"
+
+        if not token_found:
+            return {
+                "authenticated": False,
+                "status_code": "NO_TOKEN",
+                "label": "未認証 (トークン未検出)",
+                "color_bg": "#fef2f2",
+                "color_fg": "#b91c1c",
+                "details": "mcp_oauth_tokens.json または mcp_config.json にトークンが見つかりません。"
+            }
+
+        if quota_status == "EXHAUSTED":
+            return {
+                "authenticated": True,
+                "status_code": "EXHAUSTED",
+                "label": f"認証済: 本日枠枯渇 ({token_preview})",
+                "color_bg": "#fffbeb",
+                "color_fg": "#b45309",
+                "details": f"ソース: {source_file}\n本日分のUbersuggest無料枠(100レポート)を消化済みです。\n明日リセットされるか、ローカルキャッシュによる判定はAPI消費0で即時可能です。"
+            }
+        elif quota_status == "RATE_LIMITED":
+            return {
+                "authenticated": True,
+                "status_code": "RATE_LIMITED",
+                "label": f"認証済: 一時制限中 ({token_preview})",
+                "color_bg": "#fffbeb",
+                "color_fg": "#d97706",
+                "details": f"ソース: {source_file}\n短時間のAPIリクエスト制限がかかっています。少し時間をおいてください。"
+            }
+        else:
+            return {
+                "authenticated": True,
+                "status_code": "OK",
+                "label": f"認証済: 正常稼働 ({token_preview})",
+                "color_bg": "#f0fdf4",
+                "color_fg": "#15803d",
+                "details": f"ソース: {source_file}\nUbersuggest MCP API接続準備完了。"
+            }
+
+    @staticmethod
     def load_keywords_db() -> List[Dict[str, Any]]:
         """Tier 1: keywords_db.json を読み込み、リストとして返す"""
         if not os.path.exists(FILE_KEYWORDS_DB):

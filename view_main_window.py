@@ -37,10 +37,12 @@ from core_config import (
     FILE_KEYWORDS_DB,
     DIR_REPORTS,
 )
+from tkinter import messagebox
 from view_tab_expand import ExpandTab
 from view_tab_results import ResultsTab
 from view_tab_database import DatabaseTab
 from view_tab_audit import AuditTab
+from service_data_manager import DataManager
 
 class MainWindow(tk.Tk):
     """wide-オンデマンド メインウィンドウクラス"""
@@ -92,9 +94,23 @@ class MainWindow(tk.Tk):
         )
         lbl_sub.pack(side=tk.LEFT, padx=(4, 0))
 
-        # 右側: 自動同期バッジ & 稼働ステータスバッジ
+        # 右側: API認証バッジ & 自動同期バッジ & 稼働ステータスバッジ
         right_box = ttk.Frame(header_frame)
         right_box.pack(side=tk.RIGHT)
+
+        self.lbl_auth_badge = tk.Label(
+            right_box,
+            text="🔑 Ubersuggest: 確認中...",
+            font=("Segoe UI", 9, "bold"),
+            bg="#f1f5f9",
+            fg="#475569",
+            padx=8,
+            pady=4,
+            relief=tk.FLAT,
+            cursor="hand2"
+        )
+        self.lbl_auth_badge.pack(side=tk.LEFT, padx=(0, 6))
+        self.lbl_auth_badge.bind("<Button-1>", lambda e: self._show_auth_details())
 
         self.lbl_sync_badge = tk.Label(
             right_box,
@@ -119,6 +135,9 @@ class MainWindow(tk.Tk):
             relief=tk.FLAT
         )
         self.lbl_status_badge.pack(side=tk.LEFT)
+
+        self._current_auth_info = {}
+        self._refresh_auth_status()
 
         # 区切り線
         sep = ttk.Separator(self, orient=tk.HORIZONTAL)
@@ -214,8 +233,36 @@ class MainWindow(tk.Tk):
                 fg=COLOR_IDLE_FG
             )
 
+    def _refresh_auth_status(self):
+        """Ubersuggestの認証トークンおよびクォータ状況を再取得してバッジ更新"""
+        try:
+            info = DataManager.check_ubersuggest_auth_status()
+            self._current_auth_info = info
+            self.lbl_auth_badge.config(
+                text=f"🔑 Ubersuggest: {info['label']}",
+                bg=info["color_bg"],
+                fg=info["color_fg"]
+            )
+        except Exception:
+            pass
+
+    def _show_auth_details(self):
+        """認証バッジクリック時に詳細ダイアログを表示"""
+        self._refresh_auth_status()
+        info = self._current_auth_info
+        if not info:
+            return
+
+        status_text = "【認証ステータス】\n"
+        status_text += f"状態: {info['label']}\n\n"
+        status_text += f"詳細情報:\n{info['details']}\n\n"
+        status_text += "※ バッジをクリックすると最新の認証状態を再確認します。"
+
+        messagebox.showinfo("Ubersuggest API 認証情報", status_text)
+
     def _on_research_finished(self):
         """リサーチ完了時の自動リフレッシュ＆タブ誘導"""
+        self._refresh_auth_status()
         self.tab_results.reload_results()
         self.tab_database.reload_data()
         self.tab_audit.reload_logs()
