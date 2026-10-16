@@ -54,8 +54,8 @@ MIN_THRESHOLD_DEFAULT = 25  # Rule 04: 25件未満APIコール完全抑止
 
 # --- ウィンドウ・UI共通設定 ---
 APP_TITLE = "wide-オンデマンド | キーワード縦横展開＆Ubersuggest当たり判定コントローラー"
-WINDOW_SIZE = "1100x820"
-WINDOW_MIN_SIZE = (960, 680)
+WINDOW_SIZE = "1240x840"
+WINDOW_MIN_SIZE = (1050, 700)
 DEFAULT_THEME = "vista"
 
 # --- UIカラーパレット (Tailwind / モダンカラースタイル) ---

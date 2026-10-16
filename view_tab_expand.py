@@ -56,13 +56,79 @@ class ExpandTab(ttk.Frame):
         self._update_threshold_meter()
 
     def _build_ui(self):
-        # 左右分割 (左: 設定・展開入力、右: コンソールログ)
+        # 3分割 (左: wide化テンプレ設定サブペイン、中央: 入力・展開フォーム、右: コンソールログ)
         paned = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
         paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
 
-        # === 左ペイン: 入力・展開フォーム ===
+        # === 1. 左サブペイン: wide化テンプレ設定 (プリセット・思考フレーム) ===
+        sidebar_frame = ttk.Frame(paned, padding=6)
+        paned.add(sidebar_frame, weight=0)
+
+        side_group = ttk.LabelFrame(sidebar_frame, text=" 📚 wide化テンプレ設定 ", padding=8)
+        side_group.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(
+            side_group,
+            text="クリックでシード・軸①・軸②を\n一発投入（25件即時達成）",
+            font=("Segoe UI", 8),
+            foreground="#64748b"
+        ).pack(anchor=tk.W, pady=(0, 6))
+
+        # テンプレ定義リスト
+        self.preset_templates = [
+            {
+                "title": "⚡ 失敗・恐怖回避型",
+                "subtitle": "高額商品・発火や事故の不安解消",
+                "seed": "ポータブル電源 買ってはいけないメーカー",
+                "axis1": ["おすすめ", "寿命", "発火事故", "危険性", "リン酸鉄リチウム", "処分方法", "コスパ最強", "日本製", "キャンプ 容量", "防災 必要な容量", "電子レンジ 使える"],
+                "axis2": ["モバイルバッテリー", "ソーラーパネル", "蓄電池", "ロボット掃除機", "冷蔵庫", "ドラム式洗濯機", "テレビ", "エアコン", "パソコン", "テント", "スマートウォッチ"]
+            },
+            {
+                "title": "🍃 デメリット・健康不安型",
+                "subtitle": "健康食品・害や太る悩みの解消",
+                "seed": "はちみつレモン 体に悪い",
+                "axis1": ["太る", "効果", "作り方", "カビ", "毎日", "賞味期限", "妊娠中", "保存容器", "白湯", "クエン酸", "効能"],
+                "axis2": ["レモン水", "リンゴ酢", "トマトジュース", "豆乳", "プロテイン", "炭酸水", "白湯", "お茶", "コーヒー", "緑茶", "青汁"]
+            },
+            {
+                "title": "📦 継続課金・サブスク型",
+                "subtitle": "月額サービス・レンタル比較",
+                "seed": "おもちゃ サブスク",
+                "axis1": ["知育", "レンタル", "買取", "収納", "人気", "年齢別", "片付け", "手作り", "消毒", "プレゼント", "赤ちゃん"],
+                "axis2": ["絵本", "洋服", "家具", "知育玩具", "花", "コーヒー", "お菓子", "家電", "音楽", "ゲーム", "服"]
+            },
+            {
+                "title": "🧠 コンプレックス・解決型",
+                "subtitle": "深いメンタル・能力の悩み",
+                "seed": "自己肯定感 低い",
+                "axis1": ["診断", "高める", "上げる", "特徴", "毒親", "原因", "チェック", "子供", "恋愛", "仕事", "トレーニング"],
+                "axis2": ["自己効力感", "自尊心", "コミュ力", "精神年齢", "語彙力", "集中力", "幸福度", "意欲", "感受性", "免疫力", "運動神経"]
+            },
+            {
+                "title": "🏪 ショップ・店舗比較型",
+                "subtitle": "100均・コンビニ等の購入場所",
+                "seed": "履歴書 セリア",
+                "axis1": ["ダイソー", "コンビニ", "書き方", "写真", "サイズ", "パート", "バイト", "志望動機", "自己PR", "封筒", "用紙"],
+                "axis2": ["職務経歴書", "封筒", "印鑑", "白封筒", "クリアファイル", "朱肉", "修正テープ", "のり", "ペン", "証明写真", "ファイル"]
+            }
+        ]
+
+        for tpl in self.preset_templates:
+            box = tk.Frame(side_group, relief=tk.GROOVE, bd=1, padx=6, pady=6, bg="#f8fafc", cursor="hand2")
+            box.pack(fill=tk.X, pady=4)
+
+            lbl_t = tk.Label(box, text=tpl["title"], font=("Segoe UI", 9, "bold"), fg="#1e293b", bg="#f8fafc", anchor=tk.W)
+            lbl_t.pack(fill=tk.X)
+            lbl_s = tk.Label(box, text=tpl["subtitle"], font=("Segoe UI", 8), fg="#64748b", bg="#f8fafc", anchor=tk.W)
+            lbl_s.pack(fill=tk.X)
+
+            # クリックイベントのバインド
+            for w in (box, lbl_t, lbl_s):
+                w.bind("<Button-1>", lambda e, p=tpl: self._apply_preset_template(p))
+
+        # === 2. 中央ペイン: 入力・展開フォーム ===
         left_frame = ttk.Frame(paned, padding=6)
-        paned.add(left_frame, weight=1)
+        paned.add(left_frame, weight=2)
 
         # 1. シードキーワード入力
         seed_group = ttk.LabelFrame(left_frame, text=" 1. シードキーワード入力 (例: [A] [B]) ", padding=8)
@@ -207,6 +273,27 @@ class ExpandTab(ttk.Frame):
 
         self._log_to_console("=== wide-オンデマンド デスクトップコントローラー 準備完了 ===\n")
         self._log_to_console("Rule 04 鉄則: キーワードが合計25件集まるまでAPIコールは一切実行されません。\n")
+
+    def _apply_preset_template(self, tpl: dict):
+        """左サブペインのテンプレをクリック時にシードと両軸を一発投入"""
+        self.var_seed.set(tpl["seed"])
+        seed = tpl["seed"].strip()
+        parts = seed.split()
+        slot_a = parts[0] if len(parts) > 0 else ""
+        slot_b = " ".join(parts[1:]) if len(parts) > 1 else ""
+
+        self.lbl_slot_a.config(text=f"[A] スロット: {slot_a}")
+        self.lbl_slot_b.config(text=f"[B] スロット: {slot_b}")
+        self.lbl_axis1_title.config(text=f"軸①: [{slot_a}] 〇〇 (前置固定)")
+        self.lbl_axis2_title.config(text=f"軸②: 〇〇 [{slot_b}] (後置固定)")
+
+        self.txt_axis1.delete("1.0", tk.END)
+        self.txt_axis1.insert("1.0", "\n".join(tpl["axis1"]))
+        self.txt_axis2.delete("1.0", tk.END)
+        self.txt_axis2.insert("1.0", "\n".join(tpl["axis2"]))
+
+        self._update_threshold_meter()
+        self._log_to_console(f"\n[テンプレ適用] '{tpl['title']}' を投入しました。(シード: {tpl['seed']})\n")
 
     def _on_seed_changed(self):
         """シード入力変更時の自動スロット更新"""
