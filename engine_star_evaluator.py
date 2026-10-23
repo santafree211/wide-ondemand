@@ -132,9 +132,60 @@ def fetch_domain_da(domain: str, token: str = "") -> int:
     except Exception:
         return 0
 
+def fetch_serp_analysis_ubersuggest(keyword: str, token: str = "") -> List[Dict[str, Any]]:
+    """
+    Ubersuggest公式 serp_analysis (Google実測SERP ＆ 公式実測DA) を1発取得
+    """
+    if not token:
+        token = get_ubersuggest_token()
+    if not token:
+        return []
+
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": "serp_analysis",
+            "arguments": {
+                "keyword": keyword,
+                "language": "ja",
+                "locId": 2392
+            }
+        }
+    }
+
+    req = urllib.request.Request(
+        "https://ubersuggest-mcp.neilpatelapi.com/mcp",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            content = resp.read().decode("utf-8")
+            for line in content.split("\n"):
+                if line.startswith("data:"):
+                    raw_json = line[5:].strip()
+                    parsed = json.loads(raw_json)
+                    if "result" in parsed and "content" in parsed["result"]:
+                        for c in parsed["result"]["content"]:
+                            if c.get("type") == "text":
+                                inner = json.loads(c.get("text", "{}"))
+                                entries = inner.get("serpEntries", [])
+                                if entries:
+                                    return entries
+    except Exception as e:
+        print(f"[fetch_serp_analysis_ubersuggest error] {e}")
+    return []
+
 def fetch_serp_domains(keyword: str, limit: int = 10) -> List[Dict[str, Any]]:
     """
-    検索上位10件のドメイン・URL・種別（QA/note）を取得
+    検索上位10件のドメイン・URL・種別（QA/note）を取得 (Googleフォールバック用)
     """
     url = "https://search.yahoo.co.jp/search?p=" + urllib.parse.quote(keyword)
     headers = {
@@ -188,52 +239,90 @@ def fetch_serp_domains(keyword: str, limit: int = 10) -> List[Dict[str, Any]]:
 
 def evaluate_keyword_stars(keyword: str, token: str = "") -> Tuple[str, Dict[str, Any]]:
     """
-    真の星判定ロジック:
-    1. 上位10ドメインを取得
-    2. 各ドメインのDAを取得 (Ubersuggest API)
-    3. DAが一桁 (1〜9) の数 ＝ ★
-    4. 知恵袋などのQ&Aサイト ＝ ☆扱い (加点)
-    5. noteは除く
+    真の星判定ロジック（Google SERP実測最優先パイプライン）:
+    1. Ubersuggest serp_analysis から Google 検索上位10位の生実測データ（ドメイン・DA）を取得
+    2. DAが一桁 (1〜9) のサイト数 ＝ ★
+    3. 知恵袋などのQ&Aサイト ＝ ☆扱い (加点)
+    4. noteは除外
+    5. serp_analysis が取得できない場合のみフォールバック
     """
-    entries = fetch_serp_domains(keyword, limit=10)
+    if not token:
+        token = get_ubersuggest_token()
+
+    # パイプライン1: Ubersuggest Google公式SERP実測
+    serp_entries = fetch_serp_analysis_ubersuggest(keyword, token=token)
+    
     single_digit_da_domains = []
     qa_domains = []
     analyzed_details = []
 
-    for item in entries:
-        domain = item["domain"]
-        is_qa = item.get("is_qa", False)
-        is_note = item.get("is_note", False)
-        
-        # 1. noteは除く
-        if is_note:
-            analyzed_details.append({"domain": domain, "da": None, "type": "NOTE_EXCLUDED"})
-            continue
+    if serp_entries:
+        # 上位10位のオーガニック枠を精査
+        organic_rank = 0
+        for entry in serp_entries:
+            entry_type = entry.get("type", "")
+            domain = entry.get("domain", "").lower()
+            url = entry.get("url", "")
+            da = entry.get("domainAuthority")
             
-        # 2. 知恵袋などのQ&Aサイトは☆扱い
-        if is_qa:
-            qa_domains.append(domain)
-            analyzed_details.append({"domain": domain, "da": None, "type": "QA_SITE_STAR"})
-            continue
+            if not domain or domain == "nodomain":
+                continue
             
-        # 3. 通常ドメインのDA調査
-        da = fetch_domain_da(domain, token=token)
-        if 1 <= da <= 9:
-            single_digit_da_domains.append({"domain": domain, "da": da})
-            analyzed_details.append({"domain": domain, "da": da, "type": "SINGLE_DIGIT_DA"})
-        else:
-            analyzed_details.append({"domain": domain, "da": da, "type": "NORMAL_DOMAIN"})
+            # オーガニック枠のみカウント
+            if entry_type == "organic":
+                organic_rank += 1
+                if organic_rank > 10:
+                    break
+            else:
+                continue
 
-    # 合計星数
-    total_stars = len(single_digit_da_domains) + len(qa_domains)
-    if total_stars >= 3:
-        star_str = "☆☆☆"
-    elif total_stars == 2:
-        star_str = "☆☆"
-    elif total_stars == 1:
-        star_str = "☆"
+            is_qa = any(qa in domain for qa in QA_DOMAINS)
+            is_note = "note.com" in domain
+
+            # 1. noteは除く
+            if is_note:
+                analyzed_details.append({"rank": organic_rank, "domain": domain, "da": da, "url": url, "type": "NOTE_EXCLUDED"})
+                continue
+
+            # 2. 知恵袋などのQ&Aサイトは☆扱い
+            if is_qa:
+                qa_domains.append(domain)
+                analyzed_details.append({"rank": organic_rank, "domain": domain, "da": da, "url": url, "type": "QA_SITE_STAR"})
+                continue
+
+            # 3. 通常ドメインのDA判定 (公式実測DA)
+            if da is not None and 1 <= int(da) <= 9:
+                single_digit_da_domains.append({"domain": domain, "da": int(da)})
+                analyzed_details.append({"rank": organic_rank, "domain": domain, "da": int(da), "url": url, "type": "SINGLE_DIGIT_DA"})
+            else:
+                analyzed_details.append({"rank": organic_rank, "domain": domain, "da": da, "url": url, "type": "NORMAL_DOMAIN"})
+
     else:
-        star_str = "-"
+        # フォールバックパイプライン
+        entries = fetch_serp_domains(keyword, limit=10)
+        for item in entries:
+            domain = item["domain"]
+            is_qa = item.get("is_qa", False)
+            is_note = item.get("is_note", False)
+            
+            if is_note:
+                analyzed_details.append({"domain": domain, "da": None, "type": "NOTE_EXCLUDED"})
+                continue
+                
+            if is_qa:
+                qa_domains.append(domain)
+                analyzed_details.append({"domain": domain, "da": None, "type": "QA_SITE_STAR"})
+                continue
+                
+            da = fetch_domain_da(domain, token=token)
+            if 1 <= da <= 9:
+                single_digit_da_domains.append({"domain": domain, "da": da})
+                analyzed_details.append({"domain": domain, "da": da, "type": "SINGLE_DIGIT_DA"})
+            else:
+                analyzed_details.append({"domain": domain, "da": da, "type": "NORMAL_DOMAIN"})
+
+    total_stars = len(single_digit_da_domains) + len(qa_domains)
+    star_str = "★" * total_stars if total_stars > 0 else "-"
 
     meta = {
         "star_rating": star_str,
@@ -242,7 +331,8 @@ def evaluate_keyword_stars(keyword: str, token: str = "") -> Tuple[str, Dict[str
         "single_digit_domains": single_digit_da_domains,
         "qa_count": len(qa_domains),
         "qa_domains": qa_domains,
-        "details": analyzed_details
+        "details": analyzed_details,
+        "source": "UBERSUGGEST_GOOGLE_SERP" if serp_entries else "FALLBACK_SERP"
     }
     return star_str, meta
 
