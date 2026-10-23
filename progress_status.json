@@ -1,1 +1,9 @@
-{"status": "IDLE", "current": 0, "total": 0, "current_keyword": "", "message": "待機中"}
+{
+  "status": "COMPLETED",
+  "current": 53,
+  "total": 53,
+  "percent": 100,
+  "current_keyword": "",
+  "message": "全件のメガバッチ実測調査が完了しました！",
+  "updated_at": "2026-10-23 13:22:02"
+}
