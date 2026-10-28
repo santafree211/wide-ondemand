@@ -130,7 +130,21 @@ class WideStudioHandler(SimpleHTTPRequestHandler):
             self.wfile.write(csv_bytes)
             return
 
-        super().do_GET()
+        # 静的ファイル（JS, CSS等）にも Cache-Control を付与してブラウザキャッシュを根絶
+        self.send_response(200)
+        ctype = self.guess_type(clean_path)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        self.end_headers()
+        file_path = HERE / clean_path.lstrip("/")
+        if file_path.exists() and file_path.is_file():
+            with open(file_path, "rb") as f:
+                self.wfile.write(f.read())
+        else:
+            self.send_error(404, "File not found")
+        return
 
     def do_POST(self):
         parsed = urlparse(self.path)
