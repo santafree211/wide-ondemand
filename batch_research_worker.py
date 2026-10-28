@@ -1,4 +1,25 @@
-# batch_research_worker.py
+# -*- coding: utf-8 -*-
+"""
+==============================================================================
+【モジュール設計メモ】
+■ モジュール名: batch_research_worker.py
+■ カテゴリ: Worker / バックグラウンドメガバッチ実行ワーカー
+■ 責務・役割（Single Responsibility）:
+  - リサーチクエリファイル（temp_sidecar_query.json）を受け取り、バックグラウンドで実測パイプラインを実行する。
+  - Google公式SERP実測による星判定（engine_star_evaluator）と、進捗状態（progress_status.json）のリアルタイム更新。
+  - Ubersuggest APIモード時における★星付き精鋭キーワードのみのボリューム・難易度実測およびDB・キャッシュ保存。
+
+■ 設計思想・背景:
+  - Webサーバー（main.py）のスレッドをブロックせず、重い外部API連続呼び出しを安全に非同期処理する。
+  - 1キーワード処理ごとに keywords_db.json と progress_status.json をアトミックに即時保存し、
+    UI側でのリアルタイムストリーミング表示を担保する。
+
+■ 入出力仕様:
+  - Input: sys.argv[1] (クエリJSONファイルパス)
+  - Output: keywords_db.json, verified_volume_cache.json, progress_status.json の更新
+==============================================================================
+"""
+
 import os
 import sys
 import json
