@@ -6,7 +6,7 @@
     API Consumption is GUARANTEED to be:
     - 0 Calls: If all target keywords already exist in Tier 2 Cache.
     - Exactly 1 Call: Merges Multi-Seeds + Missing Keywords into ONE array, executed via match_keywords (limit: 100).
-#>
+# #>
 
 param(
     [string]$QueryFile = "query.json",
@@ -18,6 +18,7 @@ $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDir "api_ubersuggest_client.ps1")
+. (Join-Path $ScriptDir "engine_star_evaluator.ps1")
 
 $CacheFile = Join-Path $ScriptDir "verified_volume_cache.json"
 $DbFile    = Join-Path $ScriptDir "keywords_db.json"
@@ -56,37 +57,7 @@ if ($keywordList.Count -eq 0) {
     exit 1
 }
 
-$STAR_3 = "$([char]0x2606)$([char]0x2606)$([char]0x2606)"
-$STAR_2 = "$([char]0x2606)$([char]0x2606)"
-$STAR_1 = "$([char]0x2606)"
-$STAR_NONE = "-"
-
-function Get-StarScore([string]$kw, [int]$vol = 0, [int]$sd = 0) {
-    # ユーザー規約に基づく真の星判定ロジック:
-    # 1. 検索上位10位のドメイン取得
-    # 2. UbersuggestでDA調査
-    # 3. DA一桁(1〜9)のサイト数 = ★の数
-    # 4. 知恵袋などのQ&Aサイト = ☆扱い（参入チャンスとして加点）
-    # 5. noteは除く
-    try {
-        $evalScript = Join-Path $ScriptDir "engine_star_evaluator.py"
-        if (Test-Path $evalScript) {
-            $cmd = "import sys, engine_star_evaluator, json; s, m = engine_star_evaluator.evaluate_keyword_stars(sys.argv[1]); print(json.dumps({'star': s, 'meta': m}))"
-            $out = & python -c $cmd "$kw" 2>$null
-            if ($out) {
-                $parsed = $out | ConvertFrom-Json
-                if ($parsed.star) { return $parsed.star }
-            }
-        }
-    } catch {}
-
-    # フォールバック (万一SERP取得不能時)
-    if ($vol -ge 1000 -and $sd -le 35) { return $STAR_2 }
-    if ($vol -ge 100 -and $sd -le 50) { return $STAR_1 }
-    return $STAR_NONE
-}
-
-# 1. Load Tier 2 Cache
+# # 1. Load Tier 2 Cache
 $cache = @{}
 if (Test-Path $CacheFile) {
     $rawCache = [System.IO.File]::ReadAllText($CacheFile, [System.Text.Encoding]::UTF8)
@@ -98,7 +69,7 @@ if (Test-Path $CacheFile) {
     }
 }
 
-# 2. Load Tier 1 DB
+# # 2. Load Tier 1 DB
 $dbItems = [System.Collections.ArrayList]@()
 if (Test-Path $DbFile) {
     $rawDb = [System.IO.File]::ReadAllText($DbFile, [System.Text.Encoding]::UTF8)
@@ -108,7 +79,7 @@ if (Test-Path $DbFile) {
     }
 }
 
-# 3. Diff Guard: Check Missing Keywords
+# # 3. Diff Guard: Check Missing Keywords
 $missingKeywords = [System.Collections.ArrayList]@()
 foreach ($kw in $keywordList) {
     if ($ForceRefresh -or (-not $cache.ContainsKey($kw))) {
@@ -125,18 +96,18 @@ $cacheModified = $false
 $dbModified = $false
 
 $thresholdBlocked = $false
-# 4. If any are missing, merge seeds + missing keywords into ONE MEGA-BATCH array and call API EXACTLY ONCE
+# # 4. If any are missing, merge seeds + missing keywords into ONE MEGA-BATCH array and call API EXACTLY ONCE
 if ($missingKeywords.Count -gt 0) {
     $megaBatchArray = [System.Collections.ArrayList]@()
 
-    # Add seeds first
+#     # Add seeds first
     foreach ($s in $seeds) {
         if (-not [string]::IsNullOrWhiteSpace($s) -and (-not $megaBatchArray.Contains($s))) {
             [void]$megaBatchArray.Add($s)
         }
     }
 
-    # Add missing target keywords
+#     # Add missing target keywords
     foreach ($m in $missingKeywords) {
         if (-not [string]::IsNullOrWhiteSpace($m) -and (-not $megaBatchArray.Contains($m))) {
             [void]$megaBatchArray.Add($m)
@@ -156,7 +127,7 @@ if ($missingKeywords.Count -gt 0) {
         try {
             $apiResults = Get-MatchingKeywords -Keywords $megaBatchArray -Limit 100
             
-            # Normalize $apiResults to an array of keyword items
+#             # Normalize $apiResults to an array of keyword items
             $normalizedResults = @()
             if ($apiResults) {
                 if ($apiResults.keywords -and ($apiResults.keywords -is [System.Array])) {
@@ -179,7 +150,7 @@ if ($missingKeywords.Count -gt 0) {
                     $sd  = if ($item.seo_difficulty) { [int]$item.seo_difficulty } elseif ($item.sd) { [int]$item.sd } else { 0 }
                     $star = Get-StarScore -kw $kwName -vol $vol -sd $sd
 
-                    # Update Tier 2 Cache
+#                     # Update Tier 2 Cache
                     $cache[$kwName] = [PSCustomObject]@{
                         volume      = $vol
                         sd          = $sd
@@ -188,7 +159,7 @@ if ($missingKeywords.Count -gt 0) {
                     }
                     $cacheModified = $true
 
-                    # Update Tier 1 DB
+#                     # Update Tier 1 DB
                     $foundDb = $null
                     foreach ($it in $dbItems) { if ($it.keyword -eq $kwName) { $foundDb = $it; break } }
                     if ($foundDb) {
@@ -217,7 +188,7 @@ if ($missingKeywords.Count -gt 0) {
             Write-Host "Mega-Batch Notice: $($_.Exception.Message)"
         }
 
-        # If keywords are not in DB, add them with unverified/exhausted status so UI displays them
+#         # If keywords are not in DB, add them with unverified/exhausted status so UI displays them
         foreach ($m in $missingKeywords) {
             $alreadyInDb = $false
             foreach ($it in $dbItems) {
@@ -244,7 +215,7 @@ if ($missingKeywords.Count -gt 0) {
     Write-Host "`n>>> [PERFECT CACHE HIT] All $($keywordList.Count) keywords resolved locally. API Consumption: 0 Calls!"
 }
 
-# 5. Persist Storage if updated
+# # 5. Persist Storage if updated
 if ($cacheModified) {
     $cacheJson = $cache | ConvertTo-Json -Depth 5
     [System.IO.File]::WriteAllText($CacheFile, $cacheJson, [System.Text.Encoding]::UTF8)
@@ -262,7 +233,7 @@ if ($dbModified) {
         Export-Csv -Path $CsvFile -NoTypeInformation -Encoding UTF8
 }
 
-# 6. Format Final Result Table
+# # 6. Format Final Result Table
 $finalResults = [System.Collections.ArrayList]@()
 foreach ($kw in $keywordList) {
     if ($cache.ContainsKey($kw)) {
