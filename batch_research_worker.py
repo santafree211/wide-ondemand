@@ -169,7 +169,7 @@ def run_batch_research(query_file: str):
             db["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
             with open(DB_FILE, "w", encoding="utf-8") as f:
                 json.dump(db, f, ensure_ascii=False, indent=2)
-            time.sleep(0.2)
+            time.sleep(0.8)
             continue
 
         # ========================================================
