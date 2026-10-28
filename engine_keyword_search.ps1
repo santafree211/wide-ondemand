@@ -6,7 +6,8 @@
     API Consumption is GUARANTEED to be:
     - 0 Calls: If all target keywords already exist in Tier 2 Cache.
     - Exactly 1 Call: Merges Multi-Seeds + Missing Keywords into ONE array, executed via match_keywords (limit: 100).
-# #>
+    Rule 05 Pure ASCII compliant.
+#>
 
 param(
     [string]$QueryFile = "query.json",
@@ -19,10 +20,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $ScriptDir "api_ubersuggest_client.ps1")
 . (Join-Path $ScriptDir "engine_star_evaluator.ps1")
-
-$CacheFile = Join-Path $ScriptDir "verified_volume_cache.json"
-$DbFile    = Join-Path $ScriptDir "keywords_db.json"
-$CsvFile   = Join-Path $ScriptDir "keywords.csv"
+. (Join-Path $ScriptDir "db_storage_persister.ps1")
 
 if (-not (Test-Path $QueryFile)) {
     Write-Error "Query file not found: $QueryFile"
@@ -57,29 +55,11 @@ if ($keywordList.Count -eq 0) {
     exit 1
 }
 
-# # 1. Load Tier 2 Cache
-$cache = @{}
-if (Test-Path $CacheFile) {
-    $rawCache = [System.IO.File]::ReadAllText($CacheFile, [System.Text.Encoding]::UTF8)
-    if (-not [string]::IsNullOrWhiteSpace($rawCache)) {
-        $parsedCache = $rawCache | ConvertFrom-Json
-        foreach ($prop in $parsedCache.PSObject.Properties) {
-            $cache[$prop.Name] = $prop.Value
-        }
-    }
-}
+# 1. Load Storage via db_storage_persister
+$cache = Load-Tier2Cache
+$dbItems = Load-Tier1Db
 
-# # 2. Load Tier 1 DB
-$dbItems = [System.Collections.ArrayList]@()
-if (Test-Path $DbFile) {
-    $rawDb = [System.IO.File]::ReadAllText($DbFile, [System.Text.Encoding]::UTF8)
-    if (-not [string]::IsNullOrWhiteSpace($rawDb)) {
-        $dbObj = $rawDb | ConvertFrom-Json
-        if ($dbObj.keywords) { $dbItems = [System.Collections.ArrayList]@($dbObj.keywords) }
-    }
-}
-
-# # 3. Diff Guard: Check Missing Keywords
+# 2. Diff Guard: Check Missing Keywords
 $missingKeywords = [System.Collections.ArrayList]@()
 foreach ($kw in $keywordList) {
     if ($ForceRefresh -or (-not $cache.ContainsKey($kw))) {
@@ -94,20 +74,18 @@ Write-Host ">>> Missing: $($missingKeywords.Count)"
 $nowStr = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
 $cacheModified = $false
 $dbModified = $false
-
 $thresholdBlocked = $false
-# # 4. If any are missing, merge seeds + missing keywords into ONE MEGA-BATCH array and call API EXACTLY ONCE
+
+# 3. If any are missing, merge seeds + missing keywords into ONE MEGA-BATCH array and call API EXACTLY ONCE
 if ($missingKeywords.Count -gt 0) {
     $megaBatchArray = [System.Collections.ArrayList]@()
 
-#     # Add seeds first
     foreach ($s in $seeds) {
         if (-not [string]::IsNullOrWhiteSpace($s) -and (-not $megaBatchArray.Contains($s))) {
             [void]$megaBatchArray.Add($s)
         }
     }
 
-#     # Add missing target keywords
     foreach ($m in $missingKeywords) {
         if (-not [string]::IsNullOrWhiteSpace($m) -and (-not $megaBatchArray.Contains($m))) {
             [void]$megaBatchArray.Add($m)
@@ -127,7 +105,6 @@ if ($missingKeywords.Count -gt 0) {
         try {
             $apiResults = Get-MatchingKeywords -Keywords $megaBatchArray -Limit 100
             
-#             # Normalize $apiResults to an array of keyword items
             $normalizedResults = @()
             if ($apiResults) {
                 if ($apiResults.keywords -and ($apiResults.keywords -is [System.Array])) {
@@ -150,7 +127,6 @@ if ($missingKeywords.Count -gt 0) {
                     $sd  = if ($item.seo_difficulty) { [int]$item.seo_difficulty } elseif ($item.sd) { [int]$item.sd } else { 0 }
                     $star = Get-StarScore -kw $kwName -vol $vol -sd $sd
 
-#                     # Update Tier 2 Cache
                     $cache[$kwName] = [PSCustomObject]@{
                         volume      = $vol
                         sd          = $sd
@@ -159,7 +135,6 @@ if ($missingKeywords.Count -gt 0) {
                     }
                     $cacheModified = $true
 
-#                     # Update Tier 1 DB
                     $foundDb = $null
                     foreach ($it in $dbItems) { if ($it.keyword -eq $kwName) { $foundDb = $it; break } }
                     if ($foundDb) {
@@ -188,7 +163,6 @@ if ($missingKeywords.Count -gt 0) {
             Write-Host "Mega-Batch Notice: $($_.Exception.Message)"
         }
 
-#         # If keywords are not in DB, add them with unverified/exhausted status so UI displays them
         foreach ($m in $missingKeywords) {
             $alreadyInDb = $false
             foreach ($it in $dbItems) {
@@ -215,25 +189,16 @@ if ($missingKeywords.Count -gt 0) {
     Write-Host "`n>>> [PERFECT CACHE HIT] All $($keywordList.Count) keywords resolved locally. API Consumption: 0 Calls!"
 }
 
-# # 5. Persist Storage if updated
+# 4. Persist Storage if updated via db_storage_persister
 if ($cacheModified) {
-    $cacheJson = $cache | ConvertTo-Json -Depth 5
-    [System.IO.File]::WriteAllText($CacheFile, $cacheJson, [System.Text.Encoding]::UTF8)
+    Save-Tier2Cache -cache $cache
 }
 
 if ($dbModified) {
-    $newDbObj = [PSCustomObject]@{
-        updated_at = $nowStr
-        keywords   = $dbItems
-    }
-    $newDbJson = $newDbObj | ConvertTo-Json -Depth 5
-    [System.IO.File]::WriteAllText($DbFile, $newDbJson, [System.Text.Encoding]::UTF8)
-
-    $dbItems | Select-Object star_rating, keyword, seed_keyword, expansion_type, volume, sd, search_intent, updated_at |
-        Export-Csv -Path $CsvFile -NoTypeInformation -Encoding UTF8
+    Save-Tier1Db -dbItems $dbItems -nowStr $nowStr
 }
 
-# # 6. Format Final Result Table
+# 5. Format Final Result Table
 $finalResults = [System.Collections.ArrayList]@()
 foreach ($kw in $keywordList) {
     if ($cache.ContainsKey($kw)) {
