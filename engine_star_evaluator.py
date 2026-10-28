@@ -3,57 +3,33 @@
 ==============================================================================
 【モジュール設計メモ】
 ■ モジュール名: engine_star_evaluator.py
-■ カテゴリ: Evaluation / Google公式SERP星判定エンジン
+■ カテゴリ: Evaluation / Google公式SERP星判定純粋ロジックエンジン
 ■ 責務・役割（Single Responsibility）:
-  - Ubersuggest公式の serp_analysis API (1日2,000回規模のGoogle実測リソース) を直接呼び出し、
-    Google検索オーガニック1〜10位の生実測データ（順位・URL・ドメイン・公式DA）を取得する。
-  - 公式DA（1〜9の一桁DA個人ブログ）および弱小競合パターン（知恵袋、Q&A、ママリ、無料ブログ等）を
-    正確に照合し、Google実測に基づく星数（★3〜★0）を判定する。
-  - note.comは除外。
+  - api_serp_clientから取得したGoogle公式SERP生データに基づき、星判定（★3〜★0）を算出する。
+  - 公式DA（1〜9の一桁DA個人ブログ）および弱小競合パターン（知恵袋、Q&A、ママリ、無料ブログ等）の照合。
+  - note.comの除外処理。
+  - 通信処理（HTTP）を排除し、純粋な判定アルゴリズムに徹する。
+
+■ 設計思想・背景:
+  - 通信処理を `api_serp_client.py` へ分離したことで、
+    本モジュールは約130行の極めてスリムな星判定エンジンとして独立性を担保する。
+
+■ 入出力仕様:
+  - Input: keyword: str, token: str (任意)
+  - Output: Tuple[str, Dict[str, Any]] (星文字列 "★★★", メタ詳細情報辞書)
 ==============================================================================
 """
 
 import json
 import re
-import urllib.request
-import urllib.parse
-import os
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 
+# 分離したAPI通信モジュール
+from api_serp_client import fetch_serp_analysis_ubersuggest, get_ubersuggest_token
+
 HERE = Path(__file__).parent.resolve()
 PATTERN_FILE = HERE / "weak_competitor_patterns.json"
-
-def get_ubersuggest_token() -> str:
-    """OAuthアクセストークンを取得"""
-    try:
-        from ubersuggest_token_manager import get_current_access_token
-        tok = get_current_access_token(auto_refresh=True)
-        if tok:
-            return tok
-    except Exception:
-        pass
-    user_home = Path(os.environ.get("USERPROFILE", "~")).expanduser()
-    candidate_tokens = [
-        user_home / ".gemini" / "antigravity" / "mcp_oauth_tokens.json",
-        user_home / ".gemini" / "antigravity-cli" / "mcp_oauth_tokens.json"
-    ]
-    for tf in candidate_tokens:
-        if tf.exists():
-            try:
-                with open(tf, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    if isinstance(data, dict):
-                        if "access_token" in data:
-                            return data["access_token"]
-                        for _, v in data.items():
-                            if isinstance(v, dict) and "token" in v and "access_token" in v["token"]:
-                                return v["token"]["access_token"]
-                            if isinstance(v, dict) and "access_token" in v:
-                                return v["access_token"]
-            except Exception:
-                pass
-    return ""
 
 def load_weak_competitor_patterns() -> Dict[str, Any]:
     if PATTERN_FILE.exists():
@@ -103,58 +79,6 @@ def is_weak_competitor(domain: str, url: str = "") -> Tuple[bool, str, str]:
             except Exception:
                 pass
     return False, "", ""
-
-def fetch_serp_analysis_ubersuggest(keyword: str, token: str = "") -> List[Dict[str, Any]]:
-    """
-    Ubersuggest公式 serp_analysis (Google実測SERP ＆ 公式実測DA) を1発取得
-    1日2,000回規模の公式リソースを直接活用
-    """
-    if not token:
-        token = get_ubersuggest_token()
-    if not token:
-        return []
-
-    payload = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "serp_analysis",
-            "arguments": {
-                "keyword": keyword,
-                "language": "ja",
-                "locId": 2392
-            }
-        }
-    }
-
-    req = urllib.request.Request(
-        "https://ubersuggest-mcp.neilpatelapi.com/mcp",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream",
-            "Authorization": f"Bearer {token}"
-        }
-    )
-
-    try:
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            content = resp.read().decode("utf-8")
-            for line in content.split("\n"):
-                if line.startswith("data:"):
-                    raw_json = line[5:].strip()
-                    parsed = json.loads(raw_json)
-                    if "result" in parsed and "content" in parsed["result"]:
-                        for c in parsed["result"]["content"]:
-                            if c.get("type") == "text":
-                                inner = json.loads(c.get("text", "{}"))
-                                entries = inner.get("serpEntries", [])
-                                if entries:
-                                    return entries
-    except Exception as e:
-        print(f"[fetch_serp_analysis_ubersuggest error] {keyword}: {e}")
-    return []
 
 def evaluate_keyword_stars(keyword: str, token: str = "") -> Tuple[str, Dict[str, Any]]:
     """
@@ -252,7 +176,7 @@ def evaluate_keyword_stars(keyword: str, token: str = "") -> Tuple[str, Dict[str
     }
     return star_str, meta
 
-# 後方互換ラッパー: preflightでも公式Google実測SERPを直接呼び出す
+# 後方互換ラッパー
 def evaluate_keyword_stars_preflight(keyword: str) -> Tuple[str, Dict[str, Any]]:
     return evaluate_keyword_stars(keyword)
 
