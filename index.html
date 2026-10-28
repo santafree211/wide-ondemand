@@ -137,9 +137,13 @@
   <div class="results-box">
     <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
       <span id="results-count-title">最新リサーチ結果 (全件)</span>
-      <div style="display: flex; gap: 8px; align-items: center;">
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <input type="file" id="csv-file-input" accept=".csv" style="display: none;" onchange="importCsv(event)">
+        <button onclick="document.getElementById('csv-file-input').click()" style="background: #3b82f6; color: #fff; border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="過去に保存したSERP結果CSVを読み込みます">
+          📥 CSV読込
+        </button>
         <button onclick="exportToExcel()" style="background: #10b981; color: #fff; border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-          📊 Excel出力 (.csv)
+          📊 CSV出力
         </button>
         <span style="cursor: pointer; color: var(--primary);" onclick="loadResults()">🔄 更新</span>
       </div>
@@ -522,6 +526,40 @@
       setTimeout(() => {
         alert("📊 ダウンロードフォルダ（C:\\Users\\santa\\Downloads）にCSVを直接保存しました！\n（Excelでそのまま文字化けせず開けます）");
       }, 500);
+    }
+
+    async function importCsv(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target.result;
+        try {
+          const res = await fetch("/api/import_csv", {
+            method: "POST",
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+            body: text
+          });
+          const data = await res.json();
+          if (data.status === "ok") {
+            if (data.seed_keyword) {
+              document.getElementById("seed-input").value = data.seed_keyword;
+              updateLabels(data.seed_keyword);
+              updateMeter();
+            }
+            alert(`✅ CSVから ${data.count} 件のキーワード（★星付き含む）を最新リサーチ結果に読み込みました！\nこのまま「🚀 2. Ubersuggest API実行」を押すと、星付きKWのみのボリュームを一括実測できます。`);
+            loadResults();
+          } else {
+            alert("CSV読み込み失敗: " + (data.message || "形式を確認してください"));
+          }
+        } catch (err) {
+          alert("CSV読込通信エラー: " + err);
+        } finally {
+          event.target.value = "";
+        }
+      };
+      reader.readAsText(file, "UTF-8");
     }
 
     let isQuotaExhausted = false;

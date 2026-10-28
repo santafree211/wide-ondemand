@@ -460,6 +460,111 @@ class WideStudioHandler(SimpleHTTPRequestHandler):
             self.wfile.write(b'{"status":"saved"}')
             return
 
+        if clean_path == "/api/import_csv":
+            import csv, io
+            length = int(self.headers.get("content-length", 0))
+            csv_text = self.rfile.read(length).decode("utf-8", errors="ignore") if length > 0 else ""
+            if csv_text.startswith("\ufeff"):
+                csv_text = csv_text[1:]
+
+            reader = csv.reader(io.StringIO(csv_text))
+            rows = list(reader)
+            if not rows:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b'{"status":"error","message":"Empty CSV file"}')
+                return
+
+            header = [h.strip() for h in rows[0]]
+            kw_idx = -1
+            star_idx = -1
+            vol_idx = -1
+            sd_idx = -1
+
+            for idx, h in enumerate(header):
+                if "キーワード" in h or "Keyword" in h or h == "kw":
+                    kw_idx = idx
+                elif "判定" in h or "星" in h or "star" in h.lower():
+                    star_idx = idx
+                elif "Vol" in h or "ボリューム" in h or "volume" in h.lower():
+                    vol_idx = idx
+                elif "SD" in h or "難易度" in h:
+                    sd_idx = idx
+
+            if kw_idx == -1:
+                kw_idx = 1 if len(header) > 1 else 0
+
+            db_file = WIDE_DIR / "keywords_db.json"
+            db = {"updated_at": "", "keywords": []}
+            if db_file.exists():
+                try:
+                    with open(db_file, "r", encoding="utf-8-sig") as f:
+                        db = json.load(f)
+                except Exception:
+                    pass
+
+            existing_map = {it.get("keyword"): it for it in db.get("keywords", [])}
+            imported_count = 0
+            detected_seed = ""
+
+            for row in rows[1:]:
+                if not row or len(row) <= kw_idx:
+                    continue
+                kw = row[kw_idx].strip()
+                if not kw:
+                    continue
+
+                if not detected_seed:
+                    detected_seed = kw
+
+                star = row[star_idx].strip() if star_idx != -1 and len(row) > star_idx else "-"
+                vol_val = None
+                if vol_idx != -1 and len(row) > vol_idx and row[vol_idx].strip():
+                    try:
+                        vol_val = int(row[vol_idx].replace(",", "").strip())
+                    except Exception:
+                        pass
+                sd_val = None
+                if sd_idx != -1 and len(row) > sd_idx and row[sd_idx].strip():
+                    try:
+                        sd_val = int(row[sd_idx].strip())
+                    except Exception:
+                        pass
+
+                existing_map[kw] = {
+                    "keyword": kw,
+                    "seed_keyword": detected_seed,
+                    "expansion_type": "CSV_IMPORTED",
+                    "volume": vol_val,
+                    "sd": sd_val,
+                    "star_rating": star,
+                    "search_intent": "",
+                    "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "da_meta": {
+                        "star_rating": star,
+                        "total_stars": star.count("★"),
+                        "source": "CSV_IMPORT"
+                    }
+                }
+                imported_count += 1
+
+            db["keywords"] = list(existing_map.values())
+            db["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            with open(db_file, "w", encoding="utf-8") as f:
+                json.dump(db, f, ensure_ascii=False, indent=2)
+
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "status": "ok",
+                "count": imported_count,
+                "seed_keyword": detected_seed
+            }, ensure_ascii=False).encode("utf-8"))
+            return
+
         if clean_path == "/api/run":
             length = int(self.headers.get("content-length", 0))
             body = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
