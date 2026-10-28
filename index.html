@@ -444,16 +444,12 @@
     }
 
     async function executeBatch() {
-      // 1. メガバッチが押された瞬間に前回の結果テーブルを即座にクリア
-      clearResults();
+      // 星付きKWのみを対象にVol/SDを取得
       const tbody = document.getElementById("results-tbody");
       const titleSpan = document.getElementById("results-count-title");
-      if (titleSpan) titleSpan.innerText = "Ubersuggest API実測中 (準備中...)";
-      if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #10b981; padding: 16px; font-weight: bold;">🚀 Ubersuggest API実測を開始しました。★星付きの勝ち筋キーワードから順次実測されます...</td></tr>`;
-      }
+      if (titleSpan) titleSpan.innerText = "🚀 Ubersuggest API実測中 (星付き精鋭KWのみ)...";
 
-      // 2. ボタンを押した瞬間に即座に進捗バーを表示する
+      // ボタンを押した瞬間に進捗バーを表示
       startProgressPolling();
 
       const seed = document.getElementById("seed-input").value.trim();

@@ -475,18 +475,35 @@ class WideStudioHandler(SimpleHTTPRequestHandler):
             slot_a, slot_b = smart_split_seed(seed)
 
             all_kw = set()
-            if seed: all_kw.add(seed)
-            if slot_a: all_kw.add(slot_a)
-            if slot_b: all_kw.add(slot_b)
-            for t in axis1_terms:
-                ct = t.strip()
-                if ct: all_kw.add(ct)
-            for t in axis2_terms:
-                ct = t.strip()
-                if ct: all_kw.add(ct)
+            mode = payload.get("mode", "full")
+
+            if mode == "ubersuggest":
+                # Ubersuggest実行モード時は、直前のSERP判定で星がついた（★）キーワードのみを対象にする！
+                db_file = WIDE_DIR / "keywords_db.json"
+                if db_file.exists():
+                    try:
+                        with open(db_file, "r", encoding="utf-8-sig") as f:
+                            raw = json.load(f)
+                        for it in raw.get("keywords", []):
+                            star = it.get("star_rating", "-")
+                            if star and star != "-" and "★" in star:
+                                all_kw.add(it.get("keyword"))
+                    except Exception as e:
+                        print("Error reading starred keywords from db:", e)
+                # 万が一星付きが0件の場合は空リストにして無駄なAPI消費をゼロ遮断
+            else:
+                if seed: all_kw.add(seed)
+                if slot_a: all_kw.add(slot_a)
+                if slot_b: all_kw.add(slot_b)
+                for t in axis1_terms:
+                    ct = t.strip()
+                    if ct: all_kw.add(ct)
+                for t in axis2_terms:
+                    ct = t.strip()
+                    if ct: all_kw.add(ct)
 
             q_data = {
-                "mode": payload.get("mode", "full"),
+                "mode": mode,
                 "seed_keyword": seed,
                 "seed_keywords": [s for s in [slot_a, slot_b] if s],
                 "axis1_terms": [],
@@ -497,29 +514,30 @@ class WideStudioHandler(SimpleHTTPRequestHandler):
             with open(query_file, "w", encoding="utf-8") as f:
                 json.dump(q_data, f, ensure_ascii=False, indent=2)
 
-            # 前回の結果をクリア（クリーンスタート保証）
-            db_file = WIDE_DIR / "keywords_db.json"
-            norm_seed = seed.replace(" ", "").replace("　", "")
-            if db_file.exists():
-                try:
-                    with open(db_file, "r", encoding="utf-8-sig") as f:
-                        raw = json.load(f)
-                    # 現在のシードおよび今回の対象キーワードに該当する古いレコードを削除
-                    retained = []
-                    for it in raw.get("keywords", []):
-                        it_seed = it.get("seed_keyword", "").replace(" ", "").replace("　", "")
-                        it_kw = it.get("keyword", "")
-                        if norm_seed and (norm_seed == it_seed or norm_seed in it_seed or it_seed in norm_seed):
-                            continue
-                        if it_kw in all_kw:
-                            continue
-                        retained.append(it)
-                    raw["keywords"] = retained
-                    raw["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-                    with open(db_file, "w", encoding="utf-8") as f:
-                        json.dump(raw, f, ensure_ascii=False, indent=2)
-                except Exception as e:
-                    print("Error clearing previous results:", e)
+            # 前回の結果をクリア（SERP実行時のみクリア。Ubersuggest実行時は直前の星判定結果を活かしてVolを更新する）
+            if mode != "ubersuggest":
+                db_file = WIDE_DIR / "keywords_db.json"
+                norm_seed = seed.replace(" ", "").replace("　", "")
+                if db_file.exists():
+                    try:
+                        with open(db_file, "r", encoding="utf-8-sig") as f:
+                            raw = json.load(f)
+                        # 現在のシードおよび今回の対象キーワードに該当する古いレコードを削除
+                        retained = []
+                        for it in raw.get("keywords", []):
+                            it_seed = it.get("seed_keyword", "").replace(" ", "").replace("　", "")
+                            it_kw = it.get("keyword", "")
+                            if norm_seed and (norm_seed == it_seed or norm_seed in it_seed or it_seed in norm_seed):
+                                continue
+                            if it_kw in all_kw:
+                                continue
+                            retained.append(it)
+                        raw["keywords"] = retained
+                        raw["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                        with open(db_file, "w", encoding="utf-8") as f:
+                            json.dump(raw, f, ensure_ascii=False, indent=2)
+                    except Exception as e:
+                        print("Error clearing previous results:", e)
 
             # バックグラウンドリサーチワーカーを実行
             worker_py = WIDE_DIR / "batch_research_worker.py"
