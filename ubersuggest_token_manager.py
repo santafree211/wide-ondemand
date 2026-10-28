@@ -3,21 +3,22 @@
 ==============================================================================
 【モジュール設計メモ】
 ■ モジュール名: ubersuggest_token_manager.py
-■ カテゴリ: Auth Infrastructure / OAuthトークンライフサイクル管理
+■ カテゴリ: Auth Infrastructure / OAuthトークン自動リフレッシュ・延命管理
 ■ 責務・役割（Single Responsibility）:
-  - Ubersuggest MCPのOAuthアクセストークンおよびリフレッシュトークンの自動延命・管理。
-  - 有効期限前のプロアクティブ自動リフレッシュ（バッファ2時間）およびHTTP 401受信時のリアクティブリフレッシュ。
-  - Antigravity各ディレクトリ間でのトークンファイル同期。
+  - Ubersuggest MCPのOAuthアクセストークンの読み込みと有効期限監視（is_token_expiring_soon）。
+  - 有効期限前のプロアクティブ自動リフレッシュ（バッファ2時間）およびHTTP 401受信時のリアクティブリフレッシュ（refresh_access_token）。
+  - Antigravity各ディレクトリ間でのトークンファイル同期保存（save_oauth_entry）。
+  - 初回ログインフローは `auth_pkce_flow.py` へ分離し、本モジュールは自動延命・管理専任とする。
+
+■ 入出力仕様:
+  - [get_current_access_token]: Output: Optional[str] (有効トークン)
+  - [refresh_access_token]: Output: (success, new_access_token, err_msg)
 ==============================================================================
 """
 
 import os
 import sys
 import json
-import time
-import base64
-import hashlib
-import secrets
 import threading
 import urllib.request
 import urllib.parse
@@ -32,15 +33,11 @@ CREDENTIALS_FILE = USER_HOME / "ubersuggest_mcp_credentials.json"
 
 TOKEN_ENDPOINT = "https://ubersuggest-mcp.neilpatelapi.com/token"
 CLIENT_ID = "ubersuggest-mcp"
-SCOPE = "profile domain keywords serp backlinks site_audit content projects utility"
 
 _token_lock = threading.Lock()
-_pkce_state_store: Dict[str, str] = {}  # state -> verifier
-
 
 def get_token_file_paths():
     return [PRIMARY_TOKEN_FILE, SECONDARY_TOKEN_FILE]
-
 
 def read_oauth_entry() -> Tuple[Optional[dict], Optional[dict]]:
     """Reads the stored OAuth data and the Ubersuggest entry."""
@@ -56,15 +53,12 @@ def read_oauth_entry() -> Tuple[Optional[dict], Optional[dict]]:
                 continue
     return None, None
 
-
 def save_oauth_entry(access_token: str, refresh_token: str, expires_in: int = 172800) -> bool:
     """Saves new access and refresh tokens to all known configuration files."""
     with _token_lock:
         expiry_dt = datetime.now() + timedelta(seconds=expires_in)
-        # Format as ISO 8601 string
         expiry_str = expiry_dt.strftime("%Y-%m-%dT%H:%M:%S.0000000+09:00")
 
-        # 1. Update primary and secondary token files
         success = False
         for p in get_token_file_paths():
             try:
@@ -96,7 +90,6 @@ def save_oauth_entry(access_token: str, refresh_token: str, expires_in: int = 17
             except Exception as e:
                 print(f"[TokenManager] Error saving to {p}: {e}", file=sys.stderr)
 
-        # 2. Update credentials file if it exists
         if CREDENTIALS_FILE.exists():
             try:
                 with open(CREDENTIALS_FILE, "r", encoding="utf-8") as f:
@@ -113,7 +106,6 @@ def save_oauth_entry(access_token: str, refresh_token: str, expires_in: int = 17
                 print(f"[TokenManager] Error saving to credentials file: {e}", file=sys.stderr)
 
         return success
-
 
 def is_token_expiring_soon(buffer_hours: float = 2.0) -> bool:
     """Checks if the access token will expire within buffer_hours."""
@@ -134,12 +126,8 @@ def is_token_expiring_soon(buffer_hours: float = 2.0) -> bool:
     except Exception:
         return True
 
-
 def refresh_access_token() -> Tuple[bool, Optional[str], Optional[str]]:
-    """
-    Attempts to refresh the access token using the stored refresh_token.
-    Returns: (success: bool, access_token: Optional[str], error_message: Optional[str])
-    """
+    """Attempts to refresh the access token using the stored refresh_token."""
     _, entry = read_oauth_entry()
     if not entry or "token" not in entry:
         return False, None, "No token entry found."
@@ -183,12 +171,8 @@ def refresh_access_token() -> Tuple[bool, Optional[str], Optional[str]]:
     except Exception as e:
         return False, None, str(e)
 
-
 def get_current_access_token(auto_refresh: bool = True) -> Optional[str]:
-    """
-    Retrieves a valid access token. If near expiration and auto_refresh is True,
-    it refreshes before returning.
-    """
+    """Retrieves a valid access token. Auto-refreshes if near expiration."""
     _, entry = read_oauth_entry()
     if not entry or "token" not in entry:
         return None
@@ -204,76 +188,16 @@ def get_current_access_token(auto_refresh: bool = True) -> Optional[str]:
     
     return acc
 
-
+# 後方互換ラッパー（別モジュールからの既存参照維持）
 def generate_oauth_authorization_url(redirect_uri: str = "http://localhost:8899/oauth/callback") -> Tuple[str, str]:
-    """
-    Generates a PKCE challenge and authorization URL for interactive login.
-    Returns (authorization_url, verifier)
-    """
-    verifier = secrets.token_urlsafe(32)
-    digest = hashlib.sha256(verifier.encode("utf-8")).digest()
-    challenge = base64.urlsafe_b64encode(digest).decode("utf-8").replace("=", "")
-    state = secrets.token_urlsafe(16)
-    
-    _pkce_state_store[state] = verifier
-    
-    params = {
-        "response_type": "code",
-        "client_id": CLIENT_ID,
-        "redirect_uri": redirect_uri,
-        "scope": SCOPE,
-        "code_challenge": challenge,
-        "code_challenge_method": "S256",
-        "state": state
-    }
-    auth_url = f"https://ubersuggest-mcp.neilpatelapi.com/authorize?{urllib.parse.urlencode(params)}"
-    return auth_url, state
-
+    from auth_pkce_flow import generate_oauth_authorization_url as _gen
+    return _gen(redirect_uri)
 
 def exchange_code_for_token(code: str, state: str, redirect_uri: str = "http://localhost:8899/oauth/callback") -> Tuple[bool, Optional[str]]:
-    """
-    Exchanges an authorization code for access and refresh tokens.
-    """
-    verifier = _pkce_state_store.get(state)
-    if not verifier:
-        # Fallback to general verifier if state lost
-        verifier = _pkce_state_store.get("latest", "")
-    
-    post_fields = {
-        "grant_type": "authorization_code",
-        "client_id": CLIENT_ID,
-        "code": code,
-        "redirect_uri": redirect_uri,
-        "code_verifier": verifier
-    }
-    encoded_data = urllib.parse.urlencode(post_fields).encode("utf-8")
-    req = urllib.request.Request(
-        TOKEN_ENDPOINT,
-        data=encoded_data,
-        headers={"Content-Type": "application/x-www-form-urlencoded", "User-Agent": "AntigravityMCP/2.0"}
-    )
-    
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            resp_body = resp.read().decode("utf-8")
-            res_json = json.loads(resp_body)
-            new_acc = res_json.get("access_token")
-            new_ref = res_json.get("refresh_token")
-            expires_in = int(res_json.get("expires_in", 172800))
-            if new_acc and new_ref:
-                save_oauth_entry(new_acc, new_ref, expires_in)
-                return True, None
-            return False, "Response missing access_token or refresh_token."
-    except urllib.error.HTTPError as e:
-        err_body = e.read().decode("utf-8", errors="ignore")
-        return False, f"HTTPError {e.code}: {err_body}"
-    except Exception as e:
-        return False, str(e)
-
+    from auth_pkce_flow import exchange_code_for_token as _exc
+    return _exc(code, state, redirect_uri)
 
 if __name__ == "__main__":
     print("Testing token manager...")
     print("Expiring soon:", is_token_expiring_soon())
-    print("Attempting refresh...")
-    ok, token, err = refresh_access_token()
-    print("Result:", ok, token[:15] if token else None, err)
+    print("Valid token exists:", get_current_access_token() is not None)
