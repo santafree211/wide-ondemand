@@ -131,8 +131,13 @@ async function executeSerpOnly() {
 }
 
 async function executeBatch() {
+  if (typeof clearResults === "function") clearResults();
+  const tbody = document.getElementById("results-tbody");
   const titleSpan = document.getElementById("results-count-title");
-  if (titleSpan) titleSpan.innerText = "🚀 Ubersuggest API実測中 (星付き精鋭KWのみ)...";
+  if (titleSpan) titleSpan.innerText = "🚀 Ubersuggest API実測中 (準備中...)";
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #38bdf8; padding: 16px; font-weight: bold;">🚀 Ubersuggest API実測を開始しました。前回の結果をクリアし、最新の実測結果をリアルタイム表示します...</td></tr>`;
+  }
 
   startProgressPolling();
 

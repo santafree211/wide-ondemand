@@ -59,15 +59,14 @@ def export_research_csv(target_seed: str = "") -> Tuple[bytes, str]:
         except Exception:
             pass
 
-    if target_seed and items:
-        norm_seed = target_seed.replace(" ", "").replace("　", "")
-        filtered = []
-        for it in items:
-            it_seed = it.get("seed_keyword", "").replace(" ", "").replace("　", "")
-            if norm_seed and (norm_seed == it_seed or norm_seed in it_seed or it_seed in norm_seed):
-                filtered.append(it)
-        if filtered:
-            items = filtered
+    if target_seed and target_seed.strip():
+        norm_seed = target_seed.replace(" ", "").replace("　", "").lower()
+        items = [
+            it for it in items
+            if it.get("seed_keyword", "").replace(" ", "").replace("　", "").lower() == norm_seed
+        ]
+    else:
+        items = []
 
     headers = ["判定(星)", "キーワード", "月間検索Vol", "SEO難易度(SD)", "DA一桁サイト数", "知恵袋Q&Aサイト数", "調査日時"]
     csv_lines = [",".join(headers)]
