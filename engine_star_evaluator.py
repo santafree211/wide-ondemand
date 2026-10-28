@@ -18,10 +18,133 @@ QA_DOMAINS = [
     "teratail.com"
 ]
 
+# Free blogs / Personal domains definition (一桁DA候補)
+FREE_BLOG_DOMAINS = [
+    "blog.fc2.com",
+    "fc2.com",
+    "ameblo.jp",
+    "hatenablog.com",
+    "hatenablog.jp",
+    "hateblo.jp",
+    "hatenadiary.jp",
+    "hatenadiary.com",
+    "livedoor.blog",
+    "blog.jp",
+    "doorblog.jp",
+    "seesaa.net",
+    "cocolog-nifty.com",
+    "blog.goo.ne.jp"
+]
+
+# High DA authority sites definition (強豪大手)
+HIGH_DA_DOMAINS = [
+    "yahoo.co.jp",
+    "rakuten.co.jp",
+    "amazon.co.jp",
+    "kakaku.com",
+    "my-best.com",
+    "youtube.com",
+    "wikipedia.org",
+    "yodobashi.com",
+    "biccamera.com",
+    "yamada-denkiweb.com",
+    "japanet.co.jp",
+    "joshinweb.jp",
+    "monotaro.com",
+    "nikkei.com",
+    "apple.com",
+    "google.com",
+    "dji.com",
+    "ecoflow.com",
+    "ankerjapan.com",
+    "jackery.jp",
+    "mhlw.go.jp",
+    "go.jp",
+    "ac.jp",
+    "lg.jp"
+]
+
+def evaluate_keyword_stars_preflight(keyword: str) -> Tuple[str, Dict[str, Any]]:
+    """
+    【予選用】Ubersuggest API消費ゼロで Google SERP から高速に星を判定する関数
+    - 上位10件にQ&Aサイト（知恵袋等）または個人ブログ（無料ブログ・一桁DA）があるか判定
+    - 大手独占で星がつかないキーワードを Ubersuggest 本試験前に即座に足切り
+    """
+    entries = fetch_serp_domains(keyword, limit=10)
+    cache = load_da_cache()
+
+    single_digit_da_domains = []
+    qa_domains = []
+    analyzed_details = []
+
+    for rank, item in enumerate(entries, 1):
+        domain = item["domain"].lower().strip()
+        url = item.get("url", "")
+        is_qa = item.get("is_qa", False)
+        is_note = item.get("is_note", False)
+
+        # 1. noteは除外
+        if is_note:
+            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "NOTE_EXCLUDED"})
+            continue
+
+        # 2. Q&Aサイトは星判定
+        if is_qa:
+            qa_domains.append(domain)
+            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "QA_SITE_STAR"})
+            continue
+
+        # 3. 個人ブログ・無料ブログ（一桁DA相当）判定
+        is_free_blog = any(domain.endswith(fb) or domain == fb for fb in FREE_BLOG_DOMAINS)
+        if is_free_blog:
+            single_digit_da_domains.append({"domain": domain, "da": 5, "is_personal_blog": True})
+            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "PERSONAL_BLOG_STAR"})
+            continue
+
+        # 4. キャッシュ内のDA判定
+        cached_da = cache.get(domain)
+        if cached_da is not None:
+            if 1 <= int(cached_da) <= 9:
+                single_digit_da_domains.append({"domain": domain, "da": int(cached_da)})
+                analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "SINGLE_DIGIT_DA_CACHED"})
+            else:
+                analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "HIGH_DA_CACHED"})
+            continue
+
+        # 5. 強豪大手判定
+        is_high_da = any(domain.endswith(hd) or domain == hd for hd in HIGH_DA_DOMAINS)
+        if is_high_da:
+            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "HIGH_DA_AUTHORITY"})
+        else:
+            # 未知のドメイン
+            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "UNKNOWN_DOMAIN"})
+
+    total_stars = len(single_digit_da_domains) + len(qa_domains)
+    star_str = "★" * total_stars if total_stars > 0 else "-"
+
+    meta = {
+        "star_rating": star_str,
+        "total_stars": total_stars,
+        "single_digit_count": len(single_digit_da_domains),
+        "single_digit_domains": single_digit_da_domains,
+        "qa_count": len(qa_domains),
+        "qa_domains": qa_domains,
+        "details": analyzed_details,
+        "source": "SERP_PREFLIGHT_SCREENING"
+    }
+    return star_str, meta
+
 HERE = Path(__file__).parent.resolve()
 DA_CACHE_FILE = HERE / "domain_da_cache.json"
 
 def get_ubersuggest_token() -> str:
+    try:
+        from ubersuggest_token_manager import get_current_access_token
+        tok = get_current_access_token(auto_refresh=True)
+        if tok:
+            return tok
+    except Exception:
+        pass
     user_home = Path(os.environ.get("USERPROFILE", "~")).expanduser()
     candidate_tokens = [
         user_home / ".gemini" / "antigravity" / "mcp_oauth_tokens.json",
