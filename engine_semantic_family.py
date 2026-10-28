@@ -35,6 +35,21 @@ STAPLES_LIST = [
     "ナン", "フォー", "オートミール", "ピザ生地"
 ]
 
+# 調理器具・手段
+COOKING_APPLIANCES = [
+    "炊飯器", "オーブン", "電子レンジ", "フライパン", "トースター", "鍋", "ホットクック",
+    "圧力鍋", "グリル", "ホットプレート", "蒸し器", "せいろ", "湯煎", "土鍋", "トースターレンジ",
+    "ノンフライヤー", "電気圧力鍋", "低温調理器", "魚焼きグリル", "スキレット"
+]
+
+# スマホアプリ・ツールジャンル
+APP_GENRES = [
+    "カメラ", "写真加工", "動画編集", "イラスト", "お絵かき", "コラージュ", "スキャン",
+    "SNS", "音楽", "家計簿", "カレンダー", "メモ", "天気", "時計", "地図", "決済",
+    "ゲーム", "ニュース", "ラジオ", "電子書籍", "乗り換え", "歩数計", "睡眠", "ポイ活",
+    "英語学習", "辞書", "電卓", "健康管理", "タスク管理"
+]
+
 # 定番料理・メニュー
 DISHES_LIST = [
     "カレー", "シチュー", "ハンバーグ", "オムライス", "唐揚げ", "餃子", "麻婆豆腐",
@@ -175,7 +190,7 @@ def detect_scale_family(term: str) -> Optional[Tuple[str, List[str]]]:
 
 def detect_semantic_family(term: str) -> Optional[Tuple[str, List[str]]]:
     """
-    単語の意味・カテゴリ（色、スイーツ、穀物、家電、健康飲料、メンタル等）を判定し、同族単語リストを返す
+    単語の意味・カテゴリ（色、スイーツ、穀物、調理器具、アプリ、家電、健康飲料、メンタル等）を判定し、同族単語リストを返す
     """
     clean = term.strip()
 
@@ -204,43 +219,55 @@ def detect_semantic_family(term: str) -> Optional[Tuple[str, List[str]]]:
                 res.append(formatted)
         return "colors", res
 
-    # 2. 洋菓子・スイーツ
+    # 2. スマホアプリ・ツールジャンル
+    for ag in APP_GENRES:
+        if clean == ag or (len(clean) >= 2 and (clean in ag or ag in clean)):
+            res = [a for a in APP_GENRES if a != clean]
+            return "app_genres", res
+
+    # 3. 調理器具・手段
+    for ca in COOKING_APPLIANCES:
+        if clean == ca or (len(clean) >= 2 and (clean in ca or ca in clean)):
+            res = [c for c in COOKING_APPLIANCES if c != clean]
+            return "cooking_appliances", res
+
+    # 4. 洋菓子・スイーツ
     for sw in SWEETS_LIST:
         if clean == sw or (len(sw) >= 2 and (clean in sw or sw in clean)):
             res = [s for s in SWEETS_LIST if s != clean]
             return "sweets", res
 
-    # 3. 主食・穀物
+    # 5. 主食・穀物
     for st in STAPLES_LIST:
         if clean == st or (len(st) >= 2 and (clean in st or st in clean)):
             res = [s for s in STAPLES_LIST if s != clean]
             return "staples", res
 
-    # 4. 家電
+    # 6. 家電
     for ap in APPLIANCES_LIST:
         if clean == ap or (len(ap) >= 3 and (clean in ap or ap in clean)):
             res = [a for a in APPLIANCES_LIST if a != clean]
             return "appliances", res
 
-    # 5. 健康飲料・食品
+    # 7. 健康飲料・食品
     for hd in HEALTH_DRINKS:
         if clean == hd or (len(hd) >= 3 and (clean in hd or hd in clean)):
             res = [h for h in HEALTH_DRINKS if h != clean]
             return "health_drinks", res
 
-    # 6. 金具・手芸パーツ
+    # 8. 金具・手芸パーツ
     for hp in HARDWARE_PARTS:
         if clean == hp or (len(hp) >= 3 and (clean in hp or hp in clean)):
             res = [p for p in HARDWARE_PARTS if p != clean]
             return "hardware_parts", res
 
-    # 7. メンタル・人間特性
+    # 9. メンタル・人間特性
     for mt in MENTAL_TRAITS:
         if clean == mt or (len(mt) >= 3 and (clean in mt or mt in clean)):
             res = [m for m in MENTAL_TRAITS if m != clean]
             return "mental_traits", res
 
-    # 8. 洗車
+    # 10. 洗車
     for cw in CAR_WASH_STYLES:
         if clean == cw or (len(cw) >= 3 and (clean in cw or cw in clean)):
             res = [c for c in CAR_WASH_STYLES if c != clean]
@@ -249,7 +276,7 @@ def detect_semantic_family(term: str) -> Optional[Tuple[str, List[str]]]:
     return None
 
 if __name__ == "__main__":
-    for word in ["茶色", "5号", "3合", "ケーキ", "お米"]:
+    for word in ["カメラ", "炊飯器", "茶色", "5号", "3合", "ケーキ"]:
         detected = detect_semantic_family(word)
         if detected:
             cat, sibs = detected

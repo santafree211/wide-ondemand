@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 generator_ai_expansion.py
-責務: シード構文解析・前後2大固定軸展開（対称性の原則）・50件メガバッチ軸生成オーケストレーション
+責務: シード構文解析・前後2大固定軸展開（2語・3語完全両立対応）・50件メガバッチ軸生成オーケストレーション
 依存:
   - api_suggest_client.py: 外部サジェストAPI通信
   - filter_prohibited_terms.py: 地元名・エンタメ系キーワード事前排除判定
@@ -50,60 +50,166 @@ KNOWN_SUFFIXES = [
     "低い", "高い", "サブスク", "レンタル", "知育", "売ってない", "どこで買える"
 ]
 
-def smart_split_seed(text: str) -> Tuple[str, str]:
+def score_term(t: str) -> int:
+    """高維持キーワード優先度スコアリング"""
+    for hr in HIGH_RETENTION_TERMS:
+        if hr in t:
+            return 10
+    for lr in LOW_RETENTION_TERMS:
+        if lr in t:
+            return -5
+    return 1
+
+# =============================================================
+# 3語モード展開オーケストレーター: [A B] 〇〇 と 〇〇 [B C]
+# =============================================================
+def _generate_3word_axes(tokens: List[str], clean_seed: str) -> Dict[str, any]:
     """
-    シードキーワードを語数および文脈に応じて [A] と [B] に分割
+    3語キーワード [A] [B] [C] の前後2大固定軸展開
+    軸①: [A B] 〇〇 (前2語固定25個) - 対象と属性を固定し、悩み・手順・ハウツーを深掘り
+    軸②: 〇〇 [B C] (後2語固定25個) - 目的と属性を固定し、Aの同族ジャンル・手段・スケールを横展開
     """
-    clean = re.sub(r'[\s\u3000]+', ' ', text).strip()
-    tokens = clean.split(" ")
-    if len(tokens) >= 3:
-        # スケール単位（号数・合数・人前等）があればそれを最優先スロットAとして抽出
-        scale_idx = -1
-        for idx, tok in enumerate(tokens):
-            if detect_scale_family(tok):
-                scale_idx = idx
+    token_a = tokens[0]
+    token_b = tokens[1]
+    token_c = " ".join(tokens[2:])
+
+    pair_ab = f"{token_a} {token_b}"
+    pair_bc = f"{token_b} {token_c}"
+
+    # ---------------------------------------------------------
+    # 軸① [A B] 〇〇 の生成 (前2語固定)
+    # ---------------------------------------------------------
+    raw_axis1_terms = []
+
+    # 1. Googleサジェストから "A B " の候補を取得
+    suggs_ab = fetch_search_suggestions(f"{pair_ab} ")
+    for s in suggs_ab:
+        term = s.replace(pair_ab, "").strip()
+        if term and not is_prohibited_term(term) and term not in raw_axis1_terms:
+            raw_axis1_terms.append(term)
+
+    # 2. 全体シード "A B C " の派生サジェストも取得
+    suggs_seed = fetch_search_suggestions(f"{clean_seed} ")
+    for s in suggs_seed:
+        term = s.replace(pair_ab, "").strip()
+        if term and not is_prohibited_term(term) and term not in raw_axis1_terms:
+            raw_axis1_terms.append(term)
+
+    # 3. 高維持キーワードでスコアリング＆補完
+    sorted_a1 = sorted(raw_axis1_terms, key=score_term, reverse=True)
+    for hr in HIGH_RETENTION_TERMS:
+        if hr not in sorted_a1 and hr != token_c and not is_prohibited_term(hr):
+            sorted_a1.append(hr)
+        if len(sorted_a1) >= 35:
+            break
+
+    # 4. 汎用優遇ワードで25個まで埋める
+    fallbacks_a1 = ["おすすめ", "選び方", "人気", "無料", "評判", "使い方", "初心者", "コツ", "比較", "違い", "注意点"]
+    for fb in fallbacks_a1:
+        if fb not in sorted_a1 and fb != token_c and not is_prohibited_term(fb):
+            sorted_a1.append(fb)
+        if len(sorted_a1) >= 30:
+            break
+
+    # 元シードおよび禁止語を排除してきっかり25個
+    final_a1_terms = []
+    for t in sorted_a1:
+        full_kw = f"{pair_ab} {t}".strip()
+        if full_kw != clean_seed and not is_prohibited_term(t) and t not in final_a1_terms:
+            final_a1_terms.append(t)
+        if len(final_a1_terms) >= 25:
+            break
+
+    full_axis1 = [f"{pair_ab} {t}".strip() for t in final_a1_terms]
+
+    # ---------------------------------------------------------
+    # 軸② 〇〇 [B C] の生成 (後2語固定・同族横展開)
+    # ---------------------------------------------------------
+    raw_axis2_terms = []
+
+    # ★最重要: token_a の同族（同ジャンルアプリ、調理器具、号数、合数、色など）を最優先注入
+    fam_a = detect_semantic_family(token_a)
+    if fam_a:
+        _, siblings_a = fam_a
+        for sa in siblings_a:
+            if sa != token_a and not is_prohibited_term(sa) and sa not in raw_axis2_terms:
+                raw_axis2_terms.append(sa)
+
+    # 2. Googleサジェストから "B C " の前候補を取得
+    suggs_bc = fetch_search_suggestions(f"{pair_bc} ")
+    for s in suggs_bc:
+        term = s.replace(pair_bc, "").strip()
+        if term and term != token_a and not is_prohibited_term(term) and term not in raw_axis2_terms:
+            raw_axis2_terms.append(term)
+
+    # 3. 25個に満たない場合のスマート補完（同族・類似カテゴリ）
+    generic_tools = [
+        "写真加工", "動画編集", "イラスト", "お絵かき", "コラージュ", "スキャン",
+        "オーブン", "電子レンジ", "フライパン", "トースター", "鍋",
+        "4号", "6号", "7号", "8号", "3号", "10号"
+    ]
+    for gt in generic_tools:
+        if gt != token_a and not is_prohibited_term(gt) and gt not in raw_axis2_terms:
+            raw_axis2_terms.append(gt)
+        if len(raw_axis2_terms) >= 30:
+            break
+
+    final_a2_terms = []
+    for t in raw_axis2_terms:
+        full_kw = f"{t} {pair_bc}".strip()
+        if full_kw != clean_seed and not is_prohibited_term(t) and t not in final_a2_terms:
+            final_a2_terms.append(t)
+        if len(final_a2_terms) >= 25:
+            break
+
+    full_axis2 = [f"{t} {pair_bc}".strip() for t in final_a2_terms]
+
+    return {
+        "mode": "3_words",
+        "slot_a": pair_ab,
+        "slot_b": pair_bc,
+        "axis1_label": f"軸①: [{pair_ab}] 〇〇 (前固定)",
+        "axis2_label": f"軸②: 〇〇 [{pair_bc}] (後固定)",
+        "fam_a": fam_a[0] if fam_a else None,
+        "axis1_terms": final_a1_terms,
+        "axis2_terms": final_a2_terms,
+        "axis1": full_axis1,
+        "axis2": full_axis2,
+        "total_count": len(full_axis1) + len(full_axis2)
+    }
+
+# =============================================================
+# 2語モード展開オーケストレーター: [A] 〇〇 と 〇〇 [B]
+# =============================================================
+def _generate_2word_axes(tokens: List[str], clean_seed: str) -> Dict[str, any]:
+    """
+    2語キーワード [A] [B] の前後2大固定軸展開（対称性の原則）
+    軸①: [A] 〇〇 (前固定25個)
+    軸②: 〇〇 [B] (後固定25個・同族横展開)
+    """
+    if len(tokens) >= 2:
+        slot_a = tokens[0]
+        slot_b = tokens[1]
+    else:
+        slot_a = tokens[0] if tokens else clean_seed
+        slot_b = ""
+        for s in sorted(KNOWN_SUFFIXES, key=len, reverse=True):
+            if clean_seed.endswith(s) and len(clean_seed) > len(s):
+                slot_a = clean_seed[:-len(s)].strip()
+                slot_b = s
                 break
-        if scale_idx != -1:
-            slot_a = tokens[scale_idx]
-            other_toks = [t for i, t in enumerate(tokens) if i != scale_idx]
-            slot_b = " ".join(other_toks)
-            return slot_a, slot_b
-        return tokens[0], " ".join(tokens[1:])
-    elif len(tokens) == 2:
-        return tokens[0], tokens[1]
-    
-    for s in sorted(KNOWN_SUFFIXES, key=len, reverse=True):
-        if clean.endswith(s) and len(clean) > len(s):
-            return clean[:-len(s)].strip(), s
-    return clean, ""
 
-def generate_axes(seed: str) -> Dict[str, any]:
-    """
-    シードキーワードを文脈・同族・構文解析し、
-    軸①: [A] 〇〇 (前固定) 25個 (元KW除外)
-    軸②: 〇〇 [B] (後固定) 25個 (元KW除外)
-    合計50個を自動思考・生成する。
-    """
-    slot_a, slot_b = smart_split_seed(seed)
-    clean_seed = f"{slot_a} {slot_b}".strip() if slot_b else slot_a
-
-    # 同族（ファミリー）検出
     fam_a = detect_semantic_family(slot_a)
     fam_b = detect_semantic_family(slot_b) if slot_b else None
 
-    # =========================================================
-    # 軸① [A] 〇〇 の生成
-    # =========================================================
+    # 軸① [A] 〇〇
     raw_axis1_terms = []
-
-    # B側が同族を持つ場合、Bの同族を軸①の最優先として配置
     if fam_b:
         _, siblings_b = fam_b
         for sb in siblings_b:
             if sb != slot_b and not is_prohibited_term(sb) and sb not in raw_axis1_terms:
                 raw_axis1_terms.append(sb)
 
-    # Googleサジェストから文脈サジェストを取得
     if slot_b:
         suggs_combo = fetch_search_suggestions(f"{clean_seed} ")
         for s in suggs_combo:
@@ -117,7 +223,6 @@ def generate_axes(seed: str) -> Dict[str, any]:
         if term and term != slot_b and not is_prohibited_term(term) and term not in raw_axis1_terms:
             raw_axis1_terms.append(term)
 
-    # 色作りなどの特定文脈におけるスマート専門補完
     if fam_a and fam_a[0] == "colors":
         color_craft_terms = [
             "絵の具", "配合", "混色", "比率", "三原色", "パレット", "作り方 絵の具", "アクリル",
@@ -127,41 +232,30 @@ def generate_axes(seed: str) -> Dict[str, any]:
             if cct != slot_b and cct not in raw_axis1_terms:
                 raw_axis1_terms.insert(0, cct)
 
-    # 高維持キーワード（悩み・トラブル・手順・代用）で優先スコアリング補完
-    def score_term(t: str) -> int:
-        for hr in HIGH_RETENTION_TERMS:
-            if hr in t:
-                return 10
-        for lr in LOW_RETENTION_TERMS:
-            if lr in t:
-                return -5
-        return 1
-
     sorted_a1 = sorted(raw_axis1_terms, key=score_term, reverse=True)
-
     for hr in HIGH_RETENTION_TERMS:
         if hr not in sorted_a1 and hr != slot_b and not is_prohibited_term(hr):
             sorted_a1.append(hr)
         if len(sorted_a1) >= 35:
             break
 
-    final_a1_terms = [t for t in sorted_a1 if t != slot_b and not is_prohibited_term(t)][:25]
+    final_a1_terms = []
+    for t in sorted_a1:
+        full_kw = f"{slot_a} {t}".strip()
+        if full_kw != clean_seed and not is_prohibited_term(t) and t not in final_a1_terms:
+            final_a1_terms.append(t)
+        if len(final_a1_terms) >= 25:
+            break
     full_axis1 = [f"{slot_a} {t}".strip() for t in final_a1_terms]
 
-    # =========================================================
-    # 軸② 〇〇 [B] の生成
-    # =========================================================
+    # 軸② 〇〇 [B]
     raw_axis2_terms = []
-
-    # ★最重要: slot_a が同族（色、スケール号・合・人前、家電、飲料、スイーツ等）を持つ場合
-    # slot_a の同族リストを軸②の先頭に最優先で直接注入！
     if fam_a:
         _, siblings_a = fam_a
         for sa in siblings_a:
             if sa != slot_a and not is_prohibited_term(sa) and sa not in raw_axis2_terms:
                 raw_axis2_terms.append(sa)
 
-    # 固定カテゴリ対応（100均、買ってはいけない、体に悪い、低い/高い、洗車等）
     if slot_b in ["100均", "ダイソー", "セリア", "キャンドゥ", "ワッツ"]:
         for hp in HARDWARE_PARTS:
             if hp != slot_a and hp not in raw_axis2_terms:
@@ -183,7 +277,6 @@ def generate_axes(seed: str) -> Dict[str, any]:
             if cw != slot_a and cw not in raw_axis2_terms:
                 raw_axis2_terms.append(cw)
 
-    # slot_a に同族がない、または25個に満たない場合サジェストと優遇ワードで補完
     if len(raw_axis2_terms) < 25 and slot_b:
         suggs_b = fetch_search_suggestions(f"{slot_b} ")
         for s in suggs_b:
@@ -191,7 +284,6 @@ def generate_axes(seed: str) -> Dict[str, any]:
             if term and term != slot_a and not is_prohibited_term(term) and term not in raw_axis2_terms:
                 raw_axis2_terms.append(term)
 
-    # 汎用ブログ優遇ワードで25個まで埋める
     blog_quality_items = [
         "やり方", "使い方", "コツ", "手順", "洗い方", "水洗い", "時間", "料金", "相場", "値段",
         "手洗い", "自宅", "初心者", "雨の日", "冬", "夏", "洗剤", "傷つく", "デメリット", "注意点", "失敗"
@@ -202,12 +294,21 @@ def generate_axes(seed: str) -> Dict[str, any]:
         if len(raw_axis2_terms) >= 30:
             break
 
-    final_a2_terms = [t for t in raw_axis2_terms if t != slot_a and not is_prohibited_term(t)][:25]
+    final_a2_terms = []
+    for t in raw_axis2_terms:
+        full_kw = f"{t} {slot_b}".strip()
+        if full_kw != clean_seed and not is_prohibited_term(t) and t not in final_a2_terms:
+            final_a2_terms.append(t)
+        if len(final_a2_terms) >= 25:
+            break
     full_axis2 = [f"{t} {slot_b}".strip() for t in final_a2_terms]
 
     return {
+        "mode": "2_words",
         "slot_a": slot_a,
         "slot_b": slot_b,
+        "axis1_label": f"軸①: [{slot_a}] 〇〇 (前固定)",
+        "axis2_label": f"軸②: 〇〇 [{slot_b}] (後固定)",
         "fam_a": fam_a[0] if fam_a else None,
         "fam_b": fam_b[0] if fam_b else None,
         "axis1_terms": final_a1_terms,
@@ -217,15 +318,34 @@ def generate_axes(seed: str) -> Dict[str, any]:
         "total_count": len(full_axis1) + len(full_axis2)
     }
 
+def generate_axes(seed: str) -> Dict[str, any]:
+    """
+    シードキーワードを語数（2語/3語）に応じて自動判別し、前後2大固定軸を展開
+    """
+    clean_seed = re.sub(r'[\s\u3000]+', ' ', seed).strip()
+    tokens = clean_seed.split(" ")
+
+    if len(tokens) >= 3:
+        return _generate_3word_axes(tokens, clean_seed)
+    else:
+        return _generate_2word_axes(tokens, clean_seed)
+
 if __name__ == "__main__":
     import sys
-    seed = sys.argv[1] if len(sys.argv) > 1 else "茶色 作り方"
-    res = generate_axes(seed)
-    print(f"Seed: {seed} (FamA: {res['fam_a']}, FamB: {res['fam_b']})")
-    print(f"Slot A: {res['slot_a']}, Slot B: {res['slot_b']}")
-    print(f"\nAxis 1 ({len(res['axis1'])} items):")
-    for x in res['axis1'][:5]:
-        print("  ", x)
-    print(f"\nAxis 2 ({len(res['axis2'])} items):")
-    for y in res['axis2'][:5]:
-        print("  ", y)
+    test_queries = [
+        "カメラ アプリ ロゴ",
+        "茶色 作り方",
+        "5号 ケーキ 切り方",
+        "炊飯器 ケーキ 作り方",
+        "3合 お米"
+    ]
+    for q in test_queries:
+        res = generate_axes(q)
+        print(f"\n=======================================================")
+        print(f"Seed: [{q}] Mode: {res['mode']}")
+        print(f"{res['axis1_label']} ({len(res['axis1'])} items):")
+        for x in res['axis1'][:5]:
+            print(f"  {x}")
+        print(f"{res['axis2_label']} ({len(res['axis2'])} items):")
+        for y in res['axis2'][:5]:
+            print(f"  {y}")
