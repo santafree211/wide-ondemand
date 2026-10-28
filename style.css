@@ -1,0 +1,49 @@
+:root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 12px; font-size: 13px; line-height: 1.4; }
+    
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .title { font-weight: bold; font-size: 15px; color: #60a5fa; display: flex; align-items: center; gap: 6px; }
+    .badge { padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: bold; }
+    .badge-auth { background: #064e3b; color: #34d399; }
+    
+    .section-title { font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin: 10px 0 6px; letter-spacing: 0.5px; }
+    
+    
+    /* フォーム入力 */
+    .form-group { margin-bottom: 10px; }
+    label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    input[type="text"] { width: 100%; background: #0b1120; border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; color: #fff; font-size: 12px; outline: none; }
+    input[type="text"]:focus { border-color: var(--primary); }
+    
+    .axes-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    textarea { width: 100%; height: 110px; background: #0b1120; border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; color: #e2e8f0; font-size: 11px; font-family: monospace; resize: vertical; outline: none; }
+    textarea:focus { border-color: var(--primary); }
+    
+    /* メーター＆実行ボタン */
+    .meter-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px; }
+    .meter-head { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px; }
+    .progress-bar-bg { background: #0b1120; height: 6px; border-radius: 3px; overflow: hidden; }
+    .progress-bar-fill { background: var(--success); height: 100%; width: 0%; transition: width 0.3s ease; }
+    
+    .btn-run { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 8px 12px; font-weight: bold; font-size: 12px; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-run:hover { background: #1d4ed8; }
+    .btn-run:disabled { background: #475569; cursor: not-allowed; }
+
+    /* 結果プレビュー */
+    .results-box { margin-top: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
+    th { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 10px; }
+    td { padding: 4px 6px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+    .star-badge { color: #fbbf24; font-weight: bold; }
