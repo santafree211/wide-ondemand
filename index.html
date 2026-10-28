@@ -211,6 +211,7 @@
       saveState();
       updateLabels(val);
       updateMeter();
+      clearResults();
       clearTimeout(seedDebounce);
       seedDebounce = setTimeout(() => {
         if (val.trim().length > 1) {
@@ -416,11 +417,12 @@
     }
 
     async function executeSerpOnly() {
+      clearResults();
       const tbody = document.getElementById("results-tbody");
       const titleSpan = document.getElementById("results-count-title");
       if (titleSpan) titleSpan.innerText = "🔍 Google実測SERP星判定中 (準備中...)";
       if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #38bdf8; padding: 16px; font-weight: bold;">🔍 Google公式SERP実測（2,000枠）による星判定を開始しました。オーガニック1〜10位・公式DAを順次判定します...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #38bdf8; padding: 16px; font-weight: bold;">🔍 Google公式SERP実測（2,000枠）による星判定を開始しました。前回の結果をクリアし、最新の実測結果をリアルタイム表示します...</td></tr>`;
       }
 
       startProgressPolling();
@@ -443,6 +445,7 @@
 
     async function executeBatch() {
       // 1. メガバッチが押された瞬間に前回の結果テーブルを即座にクリア
+      clearResults();
       const tbody = document.getElementById("results-tbody");
       const titleSpan = document.getElementById("results-count-title");
       if (titleSpan) titleSpan.innerText = "Ubersuggest API実測中 (準備中...)";
@@ -474,6 +477,16 @@
     }
 
     let currentResultsList = [];
+
+    async function clearResults() {
+      currentResultsList = [];
+      const tbody = document.getElementById("results-tbody");
+      const titleSpan = document.getElementById("results-count-title");
+      if (titleSpan) titleSpan.innerText = "最新リサーチ結果 (0 件)";
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 10px;">リサーチを実行するとここに結果が表示されます</td></tr>`;
+      }
+    }
 
     async function loadResults() {
       try {

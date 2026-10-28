@@ -497,6 +497,30 @@ class WideStudioHandler(SimpleHTTPRequestHandler):
             with open(query_file, "w", encoding="utf-8") as f:
                 json.dump(q_data, f, ensure_ascii=False, indent=2)
 
+            # 前回の結果をクリア（クリーンスタート保証）
+            db_file = WIDE_DIR / "keywords_db.json"
+            norm_seed = seed.replace(" ", "").replace("　", "")
+            if db_file.exists():
+                try:
+                    with open(db_file, "r", encoding="utf-8-sig") as f:
+                        raw = json.load(f)
+                    # 現在のシードおよび今回の対象キーワードに該当する古いレコードを削除
+                    retained = []
+                    for it in raw.get("keywords", []):
+                        it_seed = it.get("seed_keyword", "").replace(" ", "").replace("　", "")
+                        it_kw = it.get("keyword", "")
+                        if norm_seed and (norm_seed == it_seed or norm_seed in it_seed or it_seed in norm_seed):
+                            continue
+                        if it_kw in all_kw:
+                            continue
+                        retained.append(it)
+                    raw["keywords"] = retained
+                    raw["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                    with open(db_file, "w", encoding="utf-8") as f:
+                        json.dump(raw, f, ensure_ascii=False, indent=2)
+                except Exception as e:
+                    print("Error clearing previous results:", e)
+
             # バックグラウンドリサーチワーカーを実行
             worker_py = WIDE_DIR / "batch_research_worker.py"
             cmd = [

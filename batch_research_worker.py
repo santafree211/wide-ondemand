@@ -123,7 +123,8 @@ def run_batch_research(query_file: str):
         except Exception:
             pass
 
-    existing_items = {it.get("keyword"): it for it in db.get("keywords", [])}
+    # 前回の結果を完全に分離（今回の対象キーワードはDB内の古い判定を引き継がず新規実測）
+    existing_items = {it.get("keyword"): it for it in db.get("keywords", []) if it.get("keyword") not in keywords}
 
     for i, kw in enumerate(keywords, 1):
         msg = f"[{i}/{total}] Google公式SERP星判定中: '{kw}'"
