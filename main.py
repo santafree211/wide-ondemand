@@ -185,15 +185,14 @@ class WideStudioHandler(SimpleHTTPRequestHandler):
 
             query_params = parse_qs(parsed.query)
             target_seed = query_params.get("seed", [""])[0].strip()
-            if target_seed and items:
-                norm_seed = target_seed.replace(" ", "").replace("　", "")
-                filtered = []
-                for it in items:
-                    it_seed = it.get("seed_keyword", "").replace(" ", "").replace("　", "")
-                    if norm_seed and (norm_seed == it_seed or norm_seed in it_seed or it_seed in norm_seed):
-                        filtered.append(it)
-                if filtered:
-                    items = filtered
+            if target_seed:
+                norm_seed = target_seed.replace(" ", "").replace("　", "").lower()
+                items = [
+                    it for it in items
+                    if it.get("seed_keyword", "").replace(" ", "").replace("　", "").lower() == norm_seed
+                ]
+            else:
+                items = []
 
             self.wfile.write(json.dumps(items, ensure_ascii=False).encode("utf-8"))
             return

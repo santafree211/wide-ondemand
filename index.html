@@ -626,13 +626,16 @@
       }
     }
 
-    // 初期化
-    if (!loadSavedState()) {
-      updateLabels(document.getElementById("seed-input").value || "");
-      updateMeter();
-    }
-    loadResults();
-    checkSystemStatus();
+    // 初期化 (非同期復元完了を待ってからロード)
+    (async function init() {
+      const restored = await loadSavedState();
+      if (!restored) {
+        updateLabels(document.getElementById("seed-input").value || "");
+        updateMeter();
+      }
+      await loadResults();
+      await checkSystemStatus();
+    })();
     // 30秒ごとに上限状態を自動ポーリング確認
     setInterval(checkSystemStatus, 30000);
   </script>
