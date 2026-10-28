@@ -27,12 +27,6 @@
     
     .section-title { font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin: 10px 0 6px; letter-spacing: 0.5px; }
     
-    /* テンプレカードグリッド */
-    .presets-grid { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-    .preset-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; cursor: pointer; transition: all 0.15s ease; }
-    .preset-card:hover { border-color: var(--primary); transform: translateY(-1px); background: #243248; }
-    .preset-title { font-weight: bold; color: #e2e8f0; font-size: 12px; display: flex; align-items: center; justify-content: space-between; }
-    .preset-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
     
     /* フォーム入力 */
     .form-group { margin-bottom: 10px; }
@@ -77,11 +71,6 @@
     <div style="font-size: 11px; color: #fca5a5; margin-top: 4px; line-height: 1.4;" id="quota-warning-desc">
       APIの状態を監視しています。
     </div>
-  </div>
-
-  <div class="section-title">wide化 黄金テンプレ設定</div>
-  <div class="presets-grid" id="presets-container">
-    <!-- テンプレカードが動的生成される -->
   </div>
 
   <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
@@ -166,51 +155,7 @@
   </div>
 
   <script>
-    const presets = [
-      {
-        title: "⚡ 失敗・恐怖回避型",
-        desc: "高額商品・発火事故の不安解消",
-        seed: "ポータブル電源 買ってはいけないメーカー",
-        axis1: ["おすすめ", "寿命", "発火事故", "危険性", "リン酸鉄リチウム", "処分方法", "コスパ最強", "日本製", "キャンプ 容量", "防災 必要な容量", "電子レンジ 使える"],
-        axis2: ["モバイルバッテリー", "ソーラーパネル", "蓄電池", "ロボット掃除機", "冷蔵庫", "ドラム式洗濯機", "テレビ", "エアコン", "パソコン", "テント", "スマートウォッチ"]
-      },
-      {
-        title: "🍃 デメリット・健康不安型",
-        desc: "健康食品・害や太る悩みの解消",
-        seed: "はちみつレモン 体に悪い",
-        axis1: ["太る", "効果", "作り方", "カビ", "毎日", "賞味期限", "妊娠中", "保存容器", "白湯", "クエン酸", "効能"],
-        axis2: ["レモン水", "リンゴ酢", "トマトジュース", "豆乳", "プロテイン", "炭酸水", "白湯", "お茶", "コーヒー", "緑茶", "青汁"]
-      },
-      {
-        title: "📦 継続課金・サブスク型",
-        desc: "月額サービス・レンタル比較",
-        seed: "おもちゃ サブスク",
-        axis1: ["知育", "レンタル", "買取", "収納", "人気", "年齢別", "片付け", "手作り", "消毒", "プレゼント", "赤ちゃん"],
-        axis2: ["絵本", "洋服", "家具", "知育玩具", "花", "コーヒー", "お菓子", "家電", "音楽", "ゲーム", "服"]
-      },
-      {
-        title: "🧠 コンプレックス・解決型",
-        desc: "深いメンタル・能力の悩み",
-        seed: "自己肯定感 低い",
-        axis1: ["診断", "高める", "上げる", "特徴", "毒親", "原因", "チェック", "子供", "恋愛", "仕事", "トレーニング"],
-        axis2: ["自己効力感", "自尊心", "コミュ力", "精神年齢", "語彙力", "集中力", "幸福度", "意欲", "感受性", "免疫力", "運動神経"]
-      }
-    ];
 
-    function initPresets() {
-      const container = document.getElementById("presets-container");
-      container.innerHTML = "";
-      presets.forEach((p, idx) => {
-        const div = document.createElement("div");
-        div.className = "preset-card";
-        div.onclick = () => applyPreset(idx);
-        div.innerHTML = `
-          <div class="preset-title">${p.title} <span>→</span></div>
-          <div class="preset-desc">${p.desc}</div>
-        `;
-        container.appendChild(div);
-      });
-    }
 
     function saveState() {
       const seed = document.getElementById("seed-input").value;
@@ -303,15 +248,6 @@
       }
     }
 
-    function applyPreset(idx) {
-      const p = presets[idx];
-      document.getElementById("seed-input").value = p.seed;
-      document.getElementById("axis1-input").value = p.axis1.join("\n");
-      document.getElementById("axis2-input").value = p.axis2.join("\n");
-      updateLabels(p.seed);
-      updateMeter();
-      saveState();
-    }
 
     const KNOWN_SUFFIXES = [
       "100均", "ダイソー", "セリア", "キャンドゥ", "ワッツ",
@@ -644,9 +580,9 @@
     }
 
     // 初期化
-    initPresets();
     if (!loadSavedState()) {
-      applyPreset(0);
+      updateLabels(document.getElementById("seed-input").value || "");
+      updateMeter();
     }
     loadResults();
     checkSystemStatus();
