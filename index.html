@@ -108,9 +108,9 @@
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
-    <!-- ステップ1: SERP星判定ボタン (API消費 0) -->
+    <!-- ステップ1: Google実測SERP星判定ボタン (1日2,000枠活用) -->
     <button class="btn-serp" id="btn-serp" onclick="executeSerpOnly()" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px;">
-      🔍 1. SERP星判定を実行 (API消費: 0回)
+      🔍 1. Google実測SERP星判定を実行 (公式2,000枠活用)
     </button>
 
     <!-- ステップ2: Ubersuggestメガバッチ実行ボタン -->
@@ -418,9 +418,9 @@
     async function executeSerpOnly() {
       const tbody = document.getElementById("results-tbody");
       const titleSpan = document.getElementById("results-count-title");
-      if (titleSpan) titleSpan.innerText = "🔍 SERP星判定中 (準備中...)";
+      if (titleSpan) titleSpan.innerText = "🔍 Google実測SERP星判定中 (準備中...)";
       if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #38bdf8; padding: 16px; font-weight: bold;">🔍 SERP星判定を開始しました（API消費: 0回）。知恵袋・個人ブログの有無を順次判定します...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #38bdf8; padding: 16px; font-weight: bold;">🔍 Google公式SERP実測（2,000枠）による星判定を開始しました。オーガニック1〜10位・公式DAを順次判定します...</td></tr>`;
       }
 
       startProgressPolling();

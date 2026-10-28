@@ -126,7 +126,7 @@ def run_batch_research(query_file: str):
     existing_items = {it.get("keyword"): it for it in db.get("keywords", [])}
 
     for i, kw in enumerate(keywords, 1):
-        msg = f"[{i}/{total}] 【予選】SERP星判定中: '{kw}'"
+        msg = f"[{i}/{total}] Google公式SERP星判定中: '{kw}'"
         update_progress("RUNNING", i, total, kw, msg)
 
         item_entry = existing_items.get(kw, {
@@ -142,10 +142,10 @@ def run_batch_research(query_file: str):
         })
 
         # ========================================================
-        # STEP 1: 【予選】SERPによる星（ライバルの弱さ）の判定
-        # ※Ubersuggestの100枠を温存するため、まずSERPで星を高速チェック (API消費0)
+        # STEP 1: Google公式実測SERPによる星（ライバルの弱さ）の判定
+        # ※Ubersuggest公式 serp_analysis (1日2,000回規模枠) を直接実行
         # ========================================================
-        stars, meta = evaluate_keyword_stars_preflight(kw)
+        stars, meta = evaluate_keyword_stars(kw, token=token)
         item_entry["star_rating"] = stars
         item_entry["da_meta"] = meta
         item_entry["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -153,15 +153,15 @@ def run_batch_research(query_file: str):
         has_stars = bool(stars and stars != "-" and ("★" in stars or meta.get("total_stars", 0) > 0))
 
         # ========================================================
-        # SERP単体実行モード (API消費ゼロ)
+        # SERP単体実行モード (Google公式実測SERPの星判定のみ)
         # ========================================================
         is_serp_only = (q_data.get("mode") == "serp_only")
         if is_serp_only:
             if has_stars:
-                msg_star = f"[{i}/{total}] 🌟 星あり合格！({stars}): '{kw}' (API消費: 0)"
+                msg_star = f"[{i}/{total}] 🌟 Google星あり合格！({stars}): '{kw}'"
                 item_entry["status"] = "SERP_QUALIFIED (星★合格)"
             else:
-                msg_star = f"[{i}/{total}] ❌ 星0（強豪独占）: '{kw}' (API消費: 0)"
+                msg_star = f"[{i}/{total}] ❌ 星0（強豪独占）: '{kw}'"
                 item_entry["status"] = "FILTERED_OUT (星0・強豪独占)"
             update_progress("RUNNING", i, total, kw, msg_star)
             existing_items[kw] = item_entry
@@ -169,7 +169,7 @@ def run_batch_research(query_file: str):
             db["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
             with open(DB_FILE, "w", encoding="utf-8") as f:
                 json.dump(db, f, ensure_ascii=False, indent=2)
-            time.sleep(0.8)
+            time.sleep(0.3)
             continue
 
         # ========================================================

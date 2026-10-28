@@ -1,143 +1,31 @@
-# engine_star_evaluator.py
-import re
+# -*- coding: utf-8 -*-
+"""
+==============================================================================
+【モジュール設計メモ】
+■ モジュール名: engine_star_evaluator.py
+■ カテゴリ: Evaluation / Google公式SERP星判定エンジン
+■ 責務・役割（Single Responsibility）:
+  - Ubersuggest公式の serp_analysis API (1日2,000回規模のGoogle実測リソース) を直接呼び出し、
+    Google検索オーガニック1〜10位の生実測データ（順位・URL・ドメイン・公式DA）を取得する。
+  - 公式DA（1〜9の一桁DA個人ブログ）および弱小競合パターン（知恵袋、Q&A、ママリ、無料ブログ等）を
+    正確に照合し、Google実測に基づく星数（★3〜★0）を判定する。
+  - note.comは除外。
+==============================================================================
+"""
+
 import json
+import re
 import urllib.request
 import urllib.parse
 import os
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 
-# Q&A sites definition (知恵袋、教えてgoo、OKWave、発言小町等)
-QA_DOMAINS = [
-    "chiebukuro.yahoo.co.jp",
-    "detail.chiebukuro.yahoo.co.jp",
-    "oshiete.goo.ne.jp",
-    "okwave.jp",
-    "komachi.yomiuri.co.jp",
-    "q.hatena.ne.jp",
-    "teratail.com"
-]
-
-# Free blogs / Personal domains definition (一桁DA候補)
-FREE_BLOG_DOMAINS = [
-    "blog.fc2.com",
-    "fc2.com",
-    "ameblo.jp",
-    "hatenablog.com",
-    "hatenablog.jp",
-    "hateblo.jp",
-    "hatenadiary.jp",
-    "hatenadiary.com",
-    "livedoor.blog",
-    "blog.jp",
-    "doorblog.jp",
-    "seesaa.net",
-    "cocolog-nifty.com",
-    "blog.goo.ne.jp"
-]
-
-# High DA authority sites definition (強豪大手)
-HIGH_DA_DOMAINS = [
-    "yahoo.co.jp",
-    "rakuten.co.jp",
-    "amazon.co.jp",
-    "kakaku.com",
-    "my-best.com",
-    "youtube.com",
-    "wikipedia.org",
-    "yodobashi.com",
-    "biccamera.com",
-    "yamada-denkiweb.com",
-    "japanet.co.jp",
-    "joshinweb.jp",
-    "monotaro.com",
-    "nikkei.com",
-    "apple.com",
-    "google.com",
-    "dji.com",
-    "ecoflow.com",
-    "ankerjapan.com",
-    "jackery.jp",
-    "mhlw.go.jp",
-    "go.jp",
-    "ac.jp",
-    "lg.jp"
-]
-
-def evaluate_keyword_stars_preflight(keyword: str) -> Tuple[str, Dict[str, Any]]:
-    """
-    【予選用】Ubersuggest API消費ゼロで Google SERP から高速に星を判定する関数
-    - 上位10件にQ&Aサイト（知恵袋等）または個人ブログ（無料ブログ・一桁DA）があるか判定
-    - 大手独占で星がつかないキーワードを Ubersuggest 本試験前に即座に足切り
-    """
-    entries = fetch_serp_domains(keyword, limit=10)
-    cache = load_da_cache()
-
-    single_digit_da_domains = []
-    qa_domains = []
-    analyzed_details = []
-
-    for rank, item in enumerate(entries, 1):
-        domain = item["domain"].lower().strip()
-        url = item.get("url", "")
-        is_qa = item.get("is_qa", False)
-        is_note = item.get("is_note", False)
-
-        # 1. noteは除外
-        if is_note:
-            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "NOTE_EXCLUDED"})
-            continue
-
-        # 2. Q&Aサイトは星判定
-        if is_qa:
-            qa_domains.append(domain)
-            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "QA_SITE_STAR"})
-            continue
-
-        # 3. 個人ブログ・無料ブログ（一桁DA相当）判定
-        is_free_blog = any(domain.endswith(fb) or domain == fb for fb in FREE_BLOG_DOMAINS)
-        if is_free_blog:
-            single_digit_da_domains.append({"domain": domain, "da": 5, "is_personal_blog": True})
-            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "PERSONAL_BLOG_STAR"})
-            continue
-
-        # 4. キャッシュ内のDA判定
-        cached_da = cache.get(domain)
-        if cached_da is not None:
-            if 1 <= int(cached_da) <= 9:
-                single_digit_da_domains.append({"domain": domain, "da": int(cached_da)})
-                analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "SINGLE_DIGIT_DA_CACHED"})
-            else:
-                analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "HIGH_DA_CACHED"})
-            continue
-
-        # 5. 強豪大手判定
-        is_high_da = any(domain.endswith(hd) or domain == hd for hd in HIGH_DA_DOMAINS)
-        if is_high_da:
-            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "HIGH_DA_AUTHORITY"})
-        else:
-            # 未知のドメイン
-            analyzed_details.append({"rank": rank, "domain": domain, "url": url, "type": "UNKNOWN_DOMAIN"})
-
-    total_stars = len(single_digit_da_domains) + len(qa_domains)
-    star_str = "★" * total_stars if total_stars > 0 else "-"
-
-    meta = {
-        "star_rating": star_str,
-        "total_stars": total_stars,
-        "single_digit_count": len(single_digit_da_domains),
-        "single_digit_domains": single_digit_da_domains,
-        "qa_count": len(qa_domains),
-        "qa_domains": qa_domains,
-        "details": analyzed_details,
-        "source": "SERP_PREFLIGHT_SCREENING"
-    }
-    return star_str, meta
-
 HERE = Path(__file__).parent.resolve()
-DA_CACHE_FILE = HERE / "domain_da_cache.json"
+PATTERN_FILE = HERE / "weak_competitor_patterns.json"
 
 def get_ubersuggest_token() -> str:
+    """OAuthアクセストークンを取得"""
     try:
         from ubersuggest_token_manager import get_current_access_token
         tok = get_current_access_token(auto_refresh=True)
@@ -167,97 +55,59 @@ def get_ubersuggest_token() -> str:
                 pass
     return ""
 
-def load_da_cache() -> Dict[str, int]:
-    if DA_CACHE_FILE.exists():
+def load_weak_competitor_patterns() -> Dict[str, Any]:
+    if PATTERN_FILE.exists():
         try:
-            with open(DA_CACHE_FILE, "r", encoding="utf-8") as f:
+            with open(PATTERN_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
-            return {}
-    return {}
-
-def save_da_cache(cache: Dict[str, int]):
-    try:
-        with open(DA_CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cache, f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
-
-def fetch_domain_da(domain: str, token: str = "") -> int:
-    """
-    Ubersuggest API (domain_overview) を呼び出してDAを取得（キャッシュ優先）
-    """
-    clean_domain = domain.lower().strip()
-    # ポータルやサブドメインの正規化
-    if clean_domain.startswith("www."):
-        clean_domain = clean_domain[4:]
-
-    cache = load_da_cache()
-    if clean_domain in cache:
-        return cache[clean_domain]
-
-    # 明らかな超大手・公的機関・ECはAPI節約のため高DA扱い
-    high_da_keywords = ["yahoo.co.jp", "rakuten.co.jp", "amazon.co.jp", "kakaku.com", "my-best.com", "dji.com", "ecoflow.com", "ankerjapan.com", "jackery.jp", "apple.com", "google.com", "mhlw.go.jp", "go.jp", "ac.jp", "lg.jp"]
-    for h in high_da_keywords:
-        if clean_domain.endswith(h) or clean_domain == h:
-            cache[clean_domain] = 50
-            save_da_cache(cache)
-            return 50
-
-    if not token:
-        token = get_ubersuggest_token()
-
-    if not token:
-        return 0
-
-    payload = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "domain_overview",
-            "arguments": {
-                "domain": clean_domain,
-                "language": "ja",
-                "locId": 2392
+            pass
+    return {
+        "categories": {
+            "qa_community": {
+                "patterns": [
+                    r"chiebukuro\.yahoo\.co\.jp",
+                    r"detail\.chiebukuro\.yahoo\.co\.jp",
+                    r"oshiete\.goo\.ne\.jp",
+                    r"okwave\.jp",
+                    r"komachi\.yomiuri\.co\.jp",
+                    r"jp\.quora\.com",
+                    r"q\.hatena\.ne\.jp"
+                ]
+            },
+            "free_blog_diary": {
+                "patterns": [
+                    r"ameblo\.jp",
+                    r"hatenablog\.(com|jp)",
+                    r"hateblo\.jp",
+                    r"livedoor\.(blog|jp)",
+                    r"blog\.jp",
+                    r"fc2\.com"
+                ]
             }
         }
     }
 
-    req = urllib.request.Request(
-        "https://ubersuggest-mcp.neilpatelapi.com/mcp",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream",
-            "Authorization": f"Bearer {token}"
-        }
-    )
+WEAK_PATTERNS = load_weak_competitor_patterns()
 
-    try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            content = resp.read().decode("utf-8")
-            da = 0
-            for line in content.split("\n"):
-                if line.startswith("data:"):
-                    raw_json = line[5:].strip()
-                    parsed = json.loads(raw_json)
-                    if "result" in parsed and "content" in parsed["result"]:
-                        for c in parsed["result"]["content"]:
-                            if c.get("type") == "text":
-                                inner = json.loads(c.get("text", "{}"))
-                                if "domainAuthority" in inner:
-                                    da = int(inner["domainAuthority"])
-                                    break
-            cache[clean_domain] = da
-            save_da_cache(cache)
-            return da
-    except Exception:
-        return 0
+def is_weak_competitor(domain: str, url: str = "") -> Tuple[bool, str, str]:
+    """弱小競合（Q&A・知恵袋・無料ブログ・掲示板等）に合致するか判定"""
+    clean_domain = domain.lower().strip()
+    target_str = f"{clean_domain} {url}".lower()
+    for cat_key, cat_val in WEAK_PATTERNS.get("categories", {}).items():
+        patterns = cat_val.get("patterns", [])
+        for p in patterns:
+            try:
+                if re.search(p, target_str):
+                    return True, cat_key, cat_val.get("reason", "")
+            except Exception:
+                pass
+    return False, "", ""
 
 def fetch_serp_analysis_ubersuggest(keyword: str, token: str = "") -> List[Dict[str, Any]]:
     """
     Ubersuggest公式 serp_analysis (Google実測SERP ＆ 公式実測DA) を1発取得
+    1日2,000回規模の公式リソースを直接活用
     """
     if not token:
         token = get_ubersuggest_token()
@@ -289,7 +139,7 @@ def fetch_serp_analysis_ubersuggest(keyword: str, token: str = "") -> List[Dict[
     )
 
     try:
-        with urllib.request.urlopen(req, timeout=12) as resp:
+        with urllib.request.urlopen(req, timeout=25) as resp:
             content = resp.read().decode("utf-8")
             for line in content.split("\n"):
                 if line.startswith("data:"):
@@ -303,154 +153,38 @@ def fetch_serp_analysis_ubersuggest(keyword: str, token: str = "") -> List[Dict[
                                 if entries:
                                     return entries
     except Exception as e:
-        print(f"[fetch_serp_analysis_ubersuggest error] {e}")
+        print(f"[fetch_serp_analysis_ubersuggest error] {keyword}: {e}")
     return []
-
-import base64
-
-def fetch_serp_domains(keyword: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """
-    検索上位10件のドメイン・URL・種別（QA/note）を取得
-    Yahoo（429耐性あり）＋ Bingフォールバック ＋ 知恵袋ダイレクト照合の三重冗長化
-    """
-    entries = []
-    seen_domains = set()
-
-    # 1. Yahoo検索 (メイン)
-    try:
-        url = "https://search.yahoo.co.jp/search?p=" + urllib.parse.quote(keyword)
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-            "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-            "Referer": "https://www.yahoo.co.jp/"
-        }
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            html = resp.read().decode("utf-8", errors="ignore")
-            links = re.findall(r'<a\s+[^>]*href=["\'](https?://[^"\']+)["\']', html)
-            for link in links:
-                try:
-                    parsed = urllib.parse.urlparse(link)
-                    host = parsed.netloc.lower()
-                    if not host:
-                        continue
-                    if "yahoo.co.jp" in host and "chiebukuro.yahoo.co.jp" not in host:
-                        continue
-                    if any(x in host for x in ["google.", "search.yahoo", "support.yahoo", "help.yahoo", "w3.org", "schema.org"]):
-                        continue
-                    if host in seen_domains:
-                        continue
-                    seen_domains.add(host)
-                    is_qa = any(qa in host for qa in QA_DOMAINS)
-                    is_note = "note.com" in host
-                    entries.append({
-                        "domain": host,
-                        "url": link,
-                        "is_qa": is_qa,
-                        "is_note": is_note
-                    })
-                    if len(entries) >= limit:
-                        break
-                except Exception:
-                    continue
-    except Exception:
-        pass
-
-    # 2. Bing検索フォールバック (Yahooが429で弾かれた場合または件数不足時)
-    if len(entries) < 5:
-        try:
-            url_b = "https://www.bing.com/search?q=" + urllib.parse.quote(keyword)
-            req_b = urllib.request.Request(url_b, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
-            })
-            with urllib.request.urlopen(req_b, timeout=5) as resp_b:
-                html_b = resp_b.read().decode("utf-8", errors="ignore")
-                u_params = re.findall(r'href=["\']https?://www\.bing\.com/ck/a\?[^>"\']*u=([a-zA-Z0-9_\-]+)', html_b)
-                for u in u_params:
-                    try:
-                        raw_b64 = u[2:]
-                        pad = len(raw_b64) % 4
-                        if pad:
-                            raw_b64 += '=' * (4 - pad)
-                        actual_url = base64.b64decode(raw_b64).decode("utf-8", errors="ignore")
-                        host = urllib.parse.urlparse(actual_url).netloc.lower()
-                        if not host or host in seen_domains:
-                            continue
-                        if any(x in host for x in ["bing.", "microsoft.", "live.com", "msn.com", "w3.org"]):
-                            continue
-                        seen_domains.add(host)
-                        is_qa = any(qa in host for qa in QA_DOMAINS)
-                        is_note = "note.com" in host
-                        entries.append({
-                            "domain": host,
-                            "url": actual_url,
-                            "is_qa": is_qa,
-                            "is_note": is_note
-                        })
-                        if len(entries) >= limit:
-                            break
-                    except Exception:
-                        continue
-        except Exception:
-            pass
-
-    # 3. Yahoo!知恵袋 ダイレクト照合（知恵袋に直接質問が存在するか判定）
-    if not any(e.get("is_qa") for e in entries):
-        try:
-            url_c = "https://chiebukuro.yahoo.co.jp/search?p=" + urllib.parse.quote(keyword)
-            req_c = urllib.request.Request(url_c, headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
-            })
-            with urllib.request.urlopen(req_c, timeout=4) as resp_c:
-                html_c = resp_c.read().decode("utf-8", errors="ignore")
-                if "一致する質問は見つかりませんでした" not in html_c and "見つかりませんでした" not in html_c:
-                    q_links = re.findall(r'https?://detail\.chiebukuro\.yahoo\.co\.jp/qa/question_detail/q\d+', html_c)
-                    if q_links:
-                        qa_host = "detail.chiebukuro.yahoo.co.jp"
-                        if qa_host not in seen_domains:
-                            seen_domains.add(qa_host)
-                            entries.append({
-                                "domain": qa_host,
-                                "url": q_links[0],
-                                "is_qa": True,
-                                "is_note": False
-                            })
-        except Exception:
-            pass
-
-    return entries
 
 def evaluate_keyword_stars(keyword: str, token: str = "") -> Tuple[str, Dict[str, Any]]:
     """
-    真の星判定ロジック（Google SERP実測最優先パイプライン）:
-    1. Ubersuggest serp_analysis から Google 検索上位10位の生実測データ（ドメイン・DA）を取得
-    2. DAが一桁 (1〜9) のサイト数 ＝ ★
-    3. 知恵袋などのQ&Aサイト ＝ ☆扱い (加点)
-    4. noteは除外
-    5. serp_analysis が取得できない場合のみフォールバック
+    純度100% Google公式実測SERP＆公式DAに基づく星判定パイプライン:
+    1. Ubersuggest serp_analysis から Google検索上位10位のオーガニック生実測データを取得
+    2. 公式DAが一桁 (1〜9) の独立個人ブログ ＝ ★
+    3. 知恵袋などの弱小UGC・Q&Aサイト ＝ ★
+    4. note.com は除外
+    5. 星数（★3〜★0）を厳密算出
     """
     if not token:
         token = get_ubersuggest_token()
 
-    # パイプライン1: Ubersuggest Google公式SERP実測
     serp_entries = fetch_serp_analysis_ubersuggest(keyword, token=token)
-    
+
     single_digit_da_domains = []
     qa_domains = []
     analyzed_details = []
 
     if serp_entries:
-        # 上位10位のオーガニック枠を精査
         organic_rank = 0
         for entry in serp_entries:
             entry_type = entry.get("type", "")
             domain = entry.get("domain", "").lower()
             url = entry.get("url", "")
             da = entry.get("domainAuthority")
-            
+
             if not domain or domain == "nodomain":
                 continue
-            
+
             # オーガニック枠のみカウント
             if entry_type == "organic":
                 organic_rank += 1
@@ -459,50 +193,49 @@ def evaluate_keyword_stars(keyword: str, token: str = "") -> Tuple[str, Dict[str
             else:
                 continue
 
-            is_qa = any(qa in domain for qa in QA_DOMAINS)
-            is_note = "note.com" in domain
-
-            # 1. noteは除く
-            if is_note:
-                analyzed_details.append({"rank": organic_rank, "domain": domain, "da": da, "url": url, "type": "NOTE_EXCLUDED"})
+            # 1. note.com は除外
+            if "note.com" in domain:
+                analyzed_details.append({
+                    "rank": organic_rank,
+                    "domain": domain,
+                    "da": da,
+                    "url": url,
+                    "type": "NOTE_EXCLUDED"
+                })
                 continue
 
-            # 2. 知恵袋などのQ&Aサイトは☆扱い
-            if is_qa:
+            # 2. 弱小競合（知恵袋・Q&A・無料ブログ等）判定
+            is_weak, cat, reason = is_weak_competitor(domain, url)
+            if is_weak:
                 qa_domains.append(domain)
-                analyzed_details.append({"rank": organic_rank, "domain": domain, "da": da, "url": url, "type": "QA_SITE_STAR"})
+                analyzed_details.append({
+                    "rank": organic_rank,
+                    "domain": domain,
+                    "da": da,
+                    "url": url,
+                    "type": "WEAK_COMPETITOR_STAR",
+                    "category": cat
+                })
                 continue
 
-            # 3. 通常ドメインのDA判定 (公式実測DA)
+            # 3. 公式実測DAによる一桁DA判定 (DA 1〜9)
             if da is not None and 1 <= int(da) <= 9:
                 single_digit_da_domains.append({"domain": domain, "da": int(da)})
-                analyzed_details.append({"rank": organic_rank, "domain": domain, "da": int(da), "url": url, "type": "SINGLE_DIGIT_DA"})
+                analyzed_details.append({
+                    "rank": organic_rank,
+                    "domain": domain,
+                    "da": int(da),
+                    "url": url,
+                    "type": "SINGLE_DIGIT_DA"
+                })
             else:
-                analyzed_details.append({"rank": organic_rank, "domain": domain, "da": da, "url": url, "type": "NORMAL_DOMAIN"})
-
-    else:
-        # フォールバックパイプライン
-        entries = fetch_serp_domains(keyword, limit=10)
-        for item in entries:
-            domain = item["domain"]
-            is_qa = item.get("is_qa", False)
-            is_note = item.get("is_note", False)
-            
-            if is_note:
-                analyzed_details.append({"domain": domain, "da": None, "type": "NOTE_EXCLUDED"})
-                continue
-                
-            if is_qa:
-                qa_domains.append(domain)
-                analyzed_details.append({"domain": domain, "da": None, "type": "QA_SITE_STAR"})
-                continue
-                
-            da = fetch_domain_da(domain, token=token)
-            if 1 <= da <= 9:
-                single_digit_da_domains.append({"domain": domain, "da": da})
-                analyzed_details.append({"domain": domain, "da": da, "type": "SINGLE_DIGIT_DA"})
-            else:
-                analyzed_details.append({"domain": domain, "da": da, "type": "NORMAL_DOMAIN"})
+                analyzed_details.append({
+                    "rank": organic_rank,
+                    "domain": domain,
+                    "da": da,
+                    "url": url,
+                    "type": "HIGH_DA_AUTHORITY"
+                })
 
     total_stars = len(single_digit_da_domains) + len(qa_domains)
     star_str = "★" * total_stars if total_stars > 0 else "-"
@@ -515,14 +248,18 @@ def evaluate_keyword_stars(keyword: str, token: str = "") -> Tuple[str, Dict[str
         "qa_count": len(qa_domains),
         "qa_domains": qa_domains,
         "details": analyzed_details,
-        "source": "UBERSUGGEST_GOOGLE_SERP" if serp_entries else "FALLBACK_SERP"
+        "source": "UBERSUGGEST_GOOGLE_OFFICIAL_SERP"
     }
     return star_str, meta
 
+# 後方互換ラッパー: preflightでも公式Google実測SERPを直接呼び出す
+def evaluate_keyword_stars_preflight(keyword: str) -> Tuple[str, Dict[str, Any]]:
+    return evaluate_keyword_stars(keyword)
+
 if __name__ == "__main__":
-    kw = "ポータブル電源 寿命"
+    kw = "スニーカー 厚底 歩きやすい"
     stars, meta = evaluate_keyword_stars(kw)
     print(f"Keyword: {kw}")
     print(f"Rating: {stars} (Total: {meta['total_stars']})")
-    print(f"Single Digit DAs ({meta['single_digit_count']}):", meta['single_digit_domains'])
-    print(f"QA Sites ({meta['qa_count']}):", meta['qa_domains'])
+    print(f"Single Digit DAs ({meta['single_digit_count']}):", meta["single_digit_domains"])
+    print(f"QA/Weak Sites ({meta['qa_count']}):", meta["qa_domains"])
