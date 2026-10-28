@@ -104,6 +104,19 @@ def score_term(t: str) -> int:
             return -5
     return 1
 
+def smart_split_seed(text: str) -> Tuple[str, str]:
+    """
+    シードキーワードを安全にスロットAとスロットBに分割する（互換性提供）
+    """
+    clean = re.sub(r'[\s\u3000]+', ' ', text).strip()
+    parts = clean.split(" ")
+    if len(parts) >= 2:
+        return parts[0], " ".join(parts[1:])
+    for s in sorted(KNOWN_SUFFIXES, key=len, reverse=True):
+        if clean.endswith(s) and len(clean) > len(s):
+            return clean[:-len(s)].strip(), s
+    return clean, ""
+
 # =============================================================
 # 3語モード展開オーケストレーター: [A B] 〇〇 と 〇〇 [B C]
 # =============================================================
@@ -186,16 +199,15 @@ def _generate_3word_axes(tokens: List[str], clean_seed: str) -> Dict[str, any]:
         if term and term != token_a and not is_prohibited_term(term) and term not in raw_axis2_terms:
             raw_axis2_terms.append(term)
 
-    # 3. 25個に満たない場合のスマート補完（同族・類似カテゴリ）
-    generic_tools = [
-        "写真加工", "動画編集", "イラスト", "お絵かき", "コラージュ", "スキャン",
-        "オーブン", "電子レンジ", "フライパン", "トースター", "鍋",
-        "4号", "6号", "7号", "8号", "3号", "10号"
+    # 3. 25個に満たない場合のスマート補完（ブログ優遇・属性・悩み補完）
+    blog_attributes = [
+        "ダサい", "疲れない", "歩きやすい", "痛い", "身長", "黒", "白", "安い", "コスパ", "おすすめ",
+        "人気", "かっこいい", "選び方", "デメリット", "注意点", "後悔", "手入れ", "寿命", "コーデ", "比較"
     ]
-    for gt in generic_tools:
-        if gt != token_a and not is_prohibited_term(gt) and gt not in raw_axis2_terms:
-            raw_axis2_terms.append(gt)
-        if len(raw_axis2_terms) >= 30:
+    for ba in blog_attributes:
+        if ba != token_a and not is_prohibited_term(ba) and ba not in raw_axis2_terms:
+            raw_axis2_terms.append(ba)
+        if len(raw_axis2_terms) >= 35:
             break
 
     final_a2_terms = []

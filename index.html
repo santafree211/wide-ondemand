@@ -118,9 +118,17 @@
     </div>
   </div>
 
-  <button class="btn-run" id="btn-run" onclick="executeBatch()">
-    🚀 1-Shot メガバッチ実行 (API: 1回)
-  </button>
+  <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+    <!-- ステップ1: SERP星判定ボタン (API消費 0) -->
+    <button class="btn-serp" id="btn-serp" onclick="executeSerpOnly()" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px;">
+      🔍 1. SERP星判定を実行 (API消費: 0回)
+    </button>
+
+    <!-- ステップ2: Ubersuggestメガバッチ実行ボタン -->
+    <button class="btn-run" id="btn-run" onclick="executeBatch()" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px;">
+      🚀 2. Ubersuggest API実行 (★星付きKWのみ取得)
+    </button>
+  </div>
 
   <!-- リアルタイム進捗インジケーター -->
   <div id="live-progress-box" style="display: none; background: #1e293b; border: 1px solid #3b82f6; border-radius: 6px; padding: 10px; margin-top: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);">
@@ -471,13 +479,39 @@
       }, 1000);
     }
 
+    async function executeSerpOnly() {
+      const tbody = document.getElementById("results-tbody");
+      const titleSpan = document.getElementById("results-count-title");
+      if (titleSpan) titleSpan.innerText = "🔍 SERP星判定中 (準備中...)";
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #38bdf8; padding: 16px; font-weight: bold;">🔍 SERP星判定を開始しました（API消費: 0回）。知恵袋・個人ブログの有無を順次判定します...</td></tr>`;
+      }
+
+      startProgressPolling();
+
+      const seed = document.getElementById("seed-input").value.trim();
+      const a1 = document.getElementById("axis1-input").value.split("\n").filter(x => x.trim());
+      const a2 = document.getElementById("axis2-input").value.split("\n").filter(x => x.trim());
+
+      try {
+        const res = await fetch("/api/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ seed, axis1: a1, axis2: a2, mode: "serp_only" })
+        });
+        const data = await res.json();
+      } catch (e) {
+        alert("SERP実行エラー: " + e);
+      }
+    }
+
     async function executeBatch() {
       // 1. メガバッチが押された瞬間に前回の結果テーブルを即座にクリア
       const tbody = document.getElementById("results-tbody");
       const titleSpan = document.getElementById("results-count-title");
-      if (titleSpan) titleSpan.innerText = "リサーチ実行中 (準備中...)";
+      if (titleSpan) titleSpan.innerText = "Ubersuggest API実測中 (準備中...)";
       if (tbody) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #60a5fa; padding: 16px; font-weight: bold;">⚡ 新規リサーチを開始しました。実測が完了したキーワードから順次表示されます...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #10b981; padding: 16px; font-weight: bold;">🚀 Ubersuggest API実測を開始しました。★星付きの勝ち筋キーワードから順次実測されます...</td></tr>`;
       }
 
       // 2. ボタンを押した瞬間に即座に進捗バーを表示する
@@ -491,7 +525,7 @@
         const res = await fetch("/api/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ seed, axis1: a1, axis2: a2 })
+          body: JSON.stringify({ seed, axis1: a1, axis2: a2, mode: "ubersuggest" })
         });
         const data = await res.json();
       } catch (e) {
@@ -499,7 +533,6 @@
         const btn = document.getElementById("btn-run");
         if (btn) {
           btn.disabled = false;
-          btn.innerText = "🚀 1-Shot メガバッチ実行 (API: 1回)";
         }
       }
     }

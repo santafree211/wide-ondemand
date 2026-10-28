@@ -59,6 +59,14 @@ COLORS_FULL = [
     "深緑", "山吹色", "エメラルドグリーン", "ラベンダー", "ボルドー", "ターコイズ", "ワインレッド"
 ]
 
+# 靴・フットウェア
+FOOTWEAR_LIST = [
+    "スニーカー", "革靴", "ブーツ", "サンダル", "ローファー", "スリッポン", "ミュール",
+    "パンプス", "ダッドスニーカー", "ハイカットスニーカー", "ビジネスシューズ",
+    "ドレスシューズ", "安全靴", "ランニングシューズ", "ウォーキングシューズ",
+    "ショートブーツ", "サイドゴアブーツ", "スノーブーツ", "レインブーツ", "長靴"
+]
+
 # 洋菓子・スイーツ
 SWEETS_LIST = [
     "ケーキ", "タルト", "シフォンケーキ", "チーズケーキ", "ガトーショコラ", "ロールケーキ",
@@ -269,6 +277,12 @@ def detect_semantic_family(term: str) -> Optional[Tuple[str, List[str]]]:
         if clean == ca or (len(clean) >= 2 and (clean in ca or ca in clean)):
             res = [c for c in COOKING_APPLIANCES if c != clean]
             return "cooking_appliances", res
+
+    # 靴・フットウェア
+    for fw in FOOTWEAR_LIST:
+        if clean == fw or (len(clean) >= 3 and (clean in fw or fw in clean)):
+            res = [f for f in FOOTWEAR_LIST if f != clean]
+            return "footwear", res
 
     # 4. 洋菓子・スイーツ
     for sw in SWEETS_LIST:
