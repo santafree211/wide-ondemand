@@ -306,60 +306,118 @@ def fetch_serp_analysis_ubersuggest(keyword: str, token: str = "") -> List[Dict[
         print(f"[fetch_serp_analysis_ubersuggest error] {e}")
     return []
 
+import base64
+
 def fetch_serp_domains(keyword: str, limit: int = 10) -> List[Dict[str, Any]]:
     """
-    検索上位10件のドメイン・URL・種別（QA/note）を取得 (Googleフォールバック用)
+    検索上位10件のドメイン・URL・種別（QA/note）を取得
+    Yahoo（429耐性あり）＋ Bingフォールバック ＋ 知恵袋ダイレクト照合の三重冗長化
     """
-    url = "https://search.yahoo.co.jp/search?p=" + urllib.parse.quote(keyword)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-        "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
-        "Referer": "https://www.yahoo.co.jp/"
-    }
-    req = urllib.request.Request(url, headers=headers)
-    
     entries = []
     seen_domains = set()
-    
+
+    # 1. Yahoo検索 (メイン)
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        url = "https://search.yahoo.co.jp/search?p=" + urllib.parse.quote(keyword)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+            "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+            "Referer": "https://www.yahoo.co.jp/"
+        }
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
             html = resp.read().decode("utf-8", errors="ignore")
             links = re.findall(r'<a\s+[^>]*href=["\'](https?://[^"\']+)["\']', html)
-            
             for link in links:
                 try:
                     parsed = urllib.parse.urlparse(link)
                     host = parsed.netloc.lower()
                     if not host:
                         continue
-                    
                     if "yahoo.co.jp" in host and "chiebukuro.yahoo.co.jp" not in host:
                         continue
                     if any(x in host for x in ["google.", "search.yahoo", "support.yahoo", "help.yahoo", "w3.org", "schema.org"]):
                         continue
-                    
                     if host in seen_domains:
                         continue
-                    
                     seen_domains.add(host)
-                    
                     is_qa = any(qa in host for qa in QA_DOMAINS)
                     is_note = "note.com" in host
-                    
                     entries.append({
                         "domain": host,
                         "url": link,
                         "is_qa": is_qa,
                         "is_note": is_note
                     })
-                    
                     if len(entries) >= limit:
                         break
                 except Exception:
                     continue
-    except Exception as e:
-        print(f"[fetch_serp_domains error] {e}")
-        
+    except Exception:
+        pass
+
+    # 2. Bing検索フォールバック (Yahooが429で弾かれた場合または件数不足時)
+    if len(entries) < 5:
+        try:
+            url_b = "https://www.bing.com/search?q=" + urllib.parse.quote(keyword)
+            req_b = urllib.request.Request(url_b, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+            })
+            with urllib.request.urlopen(req_b, timeout=5) as resp_b:
+                html_b = resp_b.read().decode("utf-8", errors="ignore")
+                u_params = re.findall(r'href=["\']https?://www\.bing\.com/ck/a\?[^>"\']*u=([a-zA-Z0-9_\-]+)', html_b)
+                for u in u_params:
+                    try:
+                        raw_b64 = u[2:]
+                        pad = len(raw_b64) % 4
+                        if pad:
+                            raw_b64 += '=' * (4 - pad)
+                        actual_url = base64.b64decode(raw_b64).decode("utf-8", errors="ignore")
+                        host = urllib.parse.urlparse(actual_url).netloc.lower()
+                        if not host or host in seen_domains:
+                            continue
+                        if any(x in host for x in ["bing.", "microsoft.", "live.com", "msn.com", "w3.org"]):
+                            continue
+                        seen_domains.add(host)
+                        is_qa = any(qa in host for qa in QA_DOMAINS)
+                        is_note = "note.com" in host
+                        entries.append({
+                            "domain": host,
+                            "url": actual_url,
+                            "is_qa": is_qa,
+                            "is_note": is_note
+                        })
+                        if len(entries) >= limit:
+                            break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+    # 3. Yahoo!知恵袋 ダイレクト照合（知恵袋に直接質問が存在するか判定）
+    if not any(e.get("is_qa") for e in entries):
+        try:
+            url_c = "https://chiebukuro.yahoo.co.jp/search?p=" + urllib.parse.quote(keyword)
+            req_c = urllib.request.Request(url_c, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+            })
+            with urllib.request.urlopen(req_c, timeout=4) as resp_c:
+                html_c = resp_c.read().decode("utf-8", errors="ignore")
+                if "一致する質問は見つかりませんでした" not in html_c and "見つかりませんでした" not in html_c:
+                    q_links = re.findall(r'https?://detail\.chiebukuro\.yahoo\.co\.jp/qa/question_detail/q\d+', html_c)
+                    if q_links:
+                        qa_host = "detail.chiebukuro.yahoo.co.jp"
+                        if qa_host not in seen_domains:
+                            seen_domains.add(qa_host)
+                            entries.append({
+                                "domain": qa_host,
+                                "url": q_links[0],
+                                "is_qa": True,
+                                "is_note": False
+                            })
+        except Exception:
+            pass
+
     return entries
 
 def evaluate_keyword_stars(keyword: str, token: str = "") -> Tuple[str, Dict[str, Any]]:
