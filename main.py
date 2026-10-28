@@ -12,6 +12,31 @@
     - リサーチ実行: service_research_runner
     - OAuth認証・状態: service_oauth_handler
     - 軸展開: generator_ai_expansion
+
+■ 設計思想・背景:
+  - 単一責任の原則（SRP）を徹底し、main.pyが肥大化して不具合の原因となるのを防ぐ。
+  - HTTPメソッド（GET/POST）およびパスによるディスパッチ処理のみに専念させ、
+    各サービスから返された結果を適切なHTTPステータスおよびContent-Typeでレスポンスする。
+
+■ 入出力仕様:
+  - [Port]: 8899 (環境変数 ANTIGRAVITY_SIDECAR_WEB_PORT でオーバーライド可能)
+  - [GET エンドポイント]:
+    - `/`, `/index.html`: UIフロントエンドHTML配信
+    - `/api/state`: 直前のフォーム入力状態取得
+    - `/api/status`: Ubersuggest API接続状態・認証診断結果取得
+    - `/oauth/login`, `/oauth/callback`: OAuth認証フロー
+    - `/api/progress`: リサーチ進行度（%・現在キーワード）取得
+    - `/api/results`: keywords_db.json からの最新リサーチ結果取得
+    - `/api/expand`: 前後2大固定軸の展開結果取得
+    - `/api/export_csv`: リサーチ結果のExcel互換CSVダウンロード
+  - [POST エンドポイント]:
+    - `/api/state`: フォーム入力状態の保存
+    - `/api/import_csv`: 外部SERP結果CSVのインポート
+    - `/api/run`: SERP星判定またはUbersuggestリサーチジョブの起動
+
+■ 厳格な制約・禁止事項:
+  - main.py 内部で直接ファイルパースや外部APIコールなどの重いロジックを実装してはならない。
+  - 常に委譲先サービスモジュール（service_*）を呼び出すこと。
 ==============================================================================
 """
 

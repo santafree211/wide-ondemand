@@ -6,8 +6,30 @@
 ■ カテゴリ: Execution / リサーチ実行・プロセス管理サービス
 ■ 責務・役割（Single Responsibility）:
   - リサーチ実行パラメータ（seed, axes, mode）の検証とクエリJSONの生成。
-  - バックグラウンドワーカー（batch_research_worker.py）の非同期プロセス起動とログ監視。
+  - バックグラウンドワーカー（batch_research_worker.py）の非同期プロセス起動とログ管理。
   - 前回の不要なDBレコードの安全な事前クリア（クリーンスタート制御）。
+
+■ 設計思想・背景:
+  - UIからの「Google実測SERP実行」および「Ubersuggest API実行」のリクエストを受け、
+    外部プロセス（batch_research_worker.py）を安全かつ独立して非同期実行する。
+  - Ubersuggest API実行時は、貴重な日次枠を浪費しないよう、直前のSERP判定で★がついた精鋭KWのみを
+    自動抽出してクエリにセットする。
+
+■ 入出力仕様:
+  - [start_research_job]:
+    - Input: payload (Dict[str, Any]): {"seed": str, "axis1": list, "axis2": list, "mode": "serp_only" | "ubersuggest"}
+    - Output: Dict[str, Any]: {"status": "RUNNING", "pid": プロセスID, "total_count": 対象KW総数}
+
+■ 内部アルゴリズム / 処理フロー:
+  1. smart_split_seedによりシードを構文分解（slot_a, slot_b）。
+  2. mode == "ubersuggest" の場合は、keywords_db.jsonから「★」付きKWのみを全件走査して抽出。
+  3. mode == "serp_only" の場合は、シードおよび軸①・軸②の全KWをマージ（重複排除）。
+  4. temp_sidecar_query.json を作成し、前回不要レコードをDBからアトミック除去。
+  5. subprocess.Popenにより別プロセスとして batch_research_worker.py を非同期起動。
+
+■ 厳格な制約・禁止事項:
+  - UIのHTTPスレッドをブロックしないよう、ワーカーは必ず非同期（Popen）で起動すること。
+  - 星のないキーワードを Ubersuggest 実行モードの対象に含めてはならない。
 ==============================================================================
 """
 

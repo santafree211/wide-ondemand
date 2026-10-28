@@ -8,6 +8,29 @@
   - リサーチ結果のCSVエクスポート（Excel互換BOM付きUTF-8、Downloadsフォルダ自動保存）。
   - 外部CSVファイルの解析・パースおよび keywords_db.json へのアトミック保存。
   - main.py からCSV入出力の責務を完全に分離・集約する。
+
+■ 設計思想・背景:
+  - リサーチしたキーワードデータはExcelで直接開いても文字化けしないBOM付きUTF-8形式で保存する。
+  - Google SERP星判定のみを先行実施してCSV出力しておき、後日一括してUbersuggest APIで
+    Vol/SDを実測できるよう、CSVからのインポートおよびDBアトミック復元機能を提供する。
+
+■ 入出力仕様:
+  - [export_research_csv]:
+    - Input: target_seed (str, 任意): 特定シードKWでフィルタリング
+    - Output: Tuple[bytes, str]: (CSVバイト列, 保存先ファイルパス)
+  - [import_research_csv]:
+    - Input: csv_text (str): アップロードされたCSVテキスト
+    - Output: Dict[str, Any]: {"status": "ok", "count": 件数, "seed_keyword": 検出シード}
+
+■ 内部アルゴリズム / 処理フロー:
+  1. [エクスポート]: keywords_db.json から対象キーワードを抽出し、ヘッダー行＋データ行を構築。
+     reports/ および Downloads/ にタイムスタンプ付きファイル名で自動保存。
+  2. [インポート]: CSVヘッダーから「キーワード」「判定/星」「Vol」「SD」のカラム位置を動的判定。
+     既存DBに統合（アトミック保存）し、即時UI反映を可能にする。
+
+■ 厳格な制約・禁止事項:
+  - Excelでの日本語文字化けを防ぐため、出力時は必ず `\ufeff` (UTF-8 BOM) を付与すること。
+  - ボリューム値や星判定の捏造を行ってはならない。
 ==============================================================================
 """
 
