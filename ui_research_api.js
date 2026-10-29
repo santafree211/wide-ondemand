@@ -41,22 +41,20 @@ function startProgressPolling() {
       if (kwEl) kwEl.innerText = data.current_keyword ? `調査中: ${data.current_keyword}` : "準備中...";
       if (countEl) countEl.innerText = `${data.current || 0} / ${data.total || 0} 件`;
 
-      // 途中経過もリアルタイムでテーブルに流し込む
+      // 途中経過もリアルタイムでテーブルに流し込む＆蓄積カウンター更新
       if (typeof loadResults === "function") loadResults();
+      if (typeof updateStockSummary === "function") updateStockSummary();
 
       if (data.status === "COMPLETED" || (data.total > 0 && data.current >= data.total)) {
         clearInterval(progressPollingTimer);
-        if (titleEl) titleEl.innerText = "✔ メガバッチ実測調査完了！";
+        if (titleEl) titleEl.innerText = "✔ 実測調査完了！";
         if (pctEl) pctEl.innerText = "100%";
         if (barEl) barEl.style.width = "100%";
-        if (btn) {
-          btn.disabled = false;
-          btn.innerText = "🚀 1-Shot メガバッチ実行 (API: 1回)";
-        }
+        if (typeof updateStockSummary === "function") updateStockSummary();
         setTimeout(() => {
           if (box) box.style.display = "none";
           if (titleEl) titleEl.innerText = "⚡ Ubersuggest & Google SERP リアルタイム実測中...";
-        }, 6000);
+        }, 5000);
       } else if (data.status === "ERROR") {
         clearInterval(progressPollingTimer);
         if (titleEl) titleEl.innerText = `❌ エラー: ${data.message || ""}`;

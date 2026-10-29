@@ -159,37 +159,21 @@ function updateMeter() {
   const fill = document.getElementById("meter-fill");
   const text = document.getElementById("meter-text");
   const status = document.getElementById("meter-status");
-  const btn = document.getElementById("btn-run");
+  const btnSerp = document.getElementById("btn-serp");
 
   if (text) text.innerText = `合計: ${count} / 25件`;
   if (fill) fill.style.width = Math.min((count / 25) * 100, 100) + "%";
 
-  if (window.isQuotaExhausted) {
-    if (fill) fill.style.background = "#ef4444";
-    if (status) {
-      status.innerText = "❌ API上限到達 (実行停止中)";
-      status.style.color = "#ef4444";
-    }
-    if (btn) {
-      btn.disabled = true;
-      btn.style.background = "#475569";
-      btn.style.cursor = "not-allowed";
-      btn.innerText = "🛑 API上限到達のため一時停止中";
-    }
-    return;
-  }
-
   if (count >= 25) {
     if (fill) fill.style.background = "var(--success)";
     if (status) {
-      status.innerText = "✔ 閾値達成 (実行可能)";
+      status.innerText = "✔ 閾値達成 (SERP実測可能)";
       status.style.color = "var(--success)";
     }
-    if (btn) {
-      btn.disabled = false;
-      btn.style.background = "#2563eb";
-      btn.style.cursor = "pointer";
-      btn.innerText = "🚀 1-Shot メガバッチ実行 (API: 1回)";
+    if (btnSerp) {
+      btnSerp.disabled = false;
+      btnSerp.style.opacity = "1.0";
+      btnSerp.style.cursor = "pointer";
     }
   } else {
     if (fill) fill.style.background = "var(--warning)";
@@ -197,11 +181,49 @@ function updateMeter() {
       status.innerText = `あと ${25 - count} 件不足`;
       status.style.color = "var(--warning)";
     }
-    if (btn) {
-      btn.disabled = true;
-      btn.style.background = "#475569";
-      btn.style.cursor = "not-allowed";
-      btn.innerText = "🚀 1-Shot メガバッチ実行 (API: 1回)";
+    if (btnSerp) {
+      btnSerp.disabled = true;
+      btnSerp.style.opacity = "0.6";
+      btnSerp.style.cursor = "not-allowed";
     }
+  }
+}
+
+async function updateStockSummary() {
+  try {
+    const res = await fetch(`/api/stock_summary?_t=${Date.now()}`);
+    const data = await res.json();
+    if (!data) return;
+
+    const unmeasured = data.unmeasured_count || 0;
+    const total = data.total_starred || 0;
+
+    const poolText = document.getElementById("stock-pool-text");
+    const poolFill = document.getElementById("stock-pool-fill");
+    const unmeasuredEl = document.getElementById("stock-unmeasured-count");
+    const btnRun = document.getElementById("btn-run");
+
+    if (poolText) poolText.innerText = `蓄積中: ${unmeasured} / 500 件`;
+    if (unmeasuredEl) unmeasuredEl.innerText = unmeasured;
+    if (poolFill) {
+      const pct = Math.min((unmeasured / 500) * 100, 100);
+      poolFill.style.width = `${pct}%`;
+    }
+
+    if (btnRun) {
+      if (unmeasured > 0) {
+        btnRun.disabled = false;
+        btnRun.style.background = "linear-gradient(135deg, #10b981, #059669)";
+        btnRun.style.cursor = "pointer";
+        btnRun.innerText = `🚀 2. 蓄積精鋭KWを一括Vol取得 (★${unmeasured}件 / API消費: 1回)`;
+      } else {
+        btnRun.disabled = true;
+        btnRun.style.background = "#475569";
+        btnRun.style.cursor = "not-allowed";
+        btnRun.innerText = `🚀 2. 蓄積精鋭KWを一括Vol取得 (星付きKWを蓄積中...)`;
+      }
+    }
+  } catch (e) {
+    console.error("Stock summary error:", e);
   }
 }

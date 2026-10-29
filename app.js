@@ -18,8 +18,12 @@
     updateMeter();
   }
   await loadResults();
+  if (typeof updateStockSummary === "function") await updateStockSummary();
   await checkSystemStatus();
 })();
 
-// 30秒ごとにAPI上限状態を自動ポーリング確認
-setInterval(checkSystemStatus, 30000);
+// 15秒ごとに星付きKW蓄積サマリー＆ステータスを自動更新
+setInterval(async () => {
+  if (typeof updateStockSummary === "function") await updateStockSummary();
+  await checkSystemStatus();
+}, 15000);

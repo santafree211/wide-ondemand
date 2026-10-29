@@ -61,15 +61,36 @@ def start_research_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     all_kw = set()
 
     if mode == "ubersuggest":
-        # Ubersuggest実行モード時は、直前のSERP判定で星がついた（★）キーワードのみを対象にする
+        # 蓄積された★星1つ以上の全キーワードから、Vol未取得（または最新の精鋭）を最大500件抽出
         if DB_FILE.exists():
             try:
                 with open(DB_FILE, "r", encoding="utf-8-sig") as f:
                     raw = json.load(f)
+                unmeasured_kws = []
                 for it in raw.get("keywords", []):
                     star = it.get("star_rating", "-")
-                    if star and star != "-" and "★" in star:
-                        all_kw.add(it.get("keyword"))
+                    kw = it.get("keyword")
+                    if star and star != "-" and "★" in star and kw:
+                        # まだVolが取得されていないものを優先
+                        if it.get("volume") is None:
+                            unmeasured_kws.append(kw)
+                # 重複排除して先頭最大500件
+                seen = set()
+                for k in unmeasured_kws:
+                    if k not in seen:
+                        seen.add(k)
+                        all_kw.add(k)
+                    if len(all_kw) >= 500:
+                        break
+                # もし未取得が少なければ、星付き全般からも補充（最大500件）
+                if len(all_kw) < 500:
+                    for it in raw.get("keywords", []):
+                        star = it.get("star_rating", "-")
+                        kw = it.get("keyword")
+                        if star and star != "-" and "★" in star and kw:
+                            all_kw.add(kw)
+                            if len(all_kw) >= 500:
+                                break
             except Exception as e:
                 print("Error reading starred keywords from db:", e)
     else:

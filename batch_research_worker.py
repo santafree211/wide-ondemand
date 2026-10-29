@@ -35,6 +35,7 @@ from service_progress_tracker import update_progress
 
 # 分離した単体Vol/SD取得APIクライアント
 from api_overview_client import fetch_keyword_overview
+from api_batch_volume_client import fetch_mega_batch_volumes
 
 # Google公式SERP星判定エンジン＆トークン
 from engine_star_evaluator import evaluate_keyword_stars, get_ubersuggest_token
@@ -71,6 +72,34 @@ def run_batch_research(query_file: str):
     # 前回の結果を完全に分離（今回の対象キーワードはDB内の古い判定を引き継がず新規実測）
     existing_items = {it.get("keyword"): it for it in db.get("keywords", []) if it.get("keyword") not in keywords}
 
+    # mode == "ubersuggest" (500KW/1API メガバッチ一括実行モード)
+    if q_data.get("mode") == "ubersuggest":
+        update_progress("RUNNING", 0, total, "一括Vol取得中", f"Ubersuggest 1-Shotメガバッチ送信中（対象: {total} 件）...")
+        vol_results = fetch_mega_batch_volumes(keywords, token)
+        
+        # 既存DBレコードにVol・SDを一括マージ
+        db_keywords = db.get("keywords", [])
+        updated_count = 0
+        for it in db_keywords:
+            k = it.get("keyword")
+            if k in vol_results:
+                v_data = vol_results[k]
+                if v_data.get("volume") is not None:
+                    it["volume"] = v_data["volume"]
+                if v_data.get("sd") is not None:
+                    it["sd"] = v_data["sd"]
+                it["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                updated_count += 1
+        
+        db["keywords"] = db_keywords
+        db["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        with open(DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(db, f, ensure_ascii=False, indent=2)
+
+        update_progress("COMPLETED", total, total, "", f"【完了】1-Shotメガバッチ成功！{updated_count}件のボリュームを一括更新しました (API消費: わずか1回)")
+        return
+
+    # mode == "serp_only" の場合（Google公式SERP星判定ループ）
     for i, kw in enumerate(keywords, 1):
         msg = f"[{i}/{total}] Google公式SERP星判定中: '{kw}'"
         update_progress("RUNNING", i, total, kw, msg)

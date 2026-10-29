@@ -29,7 +29,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 # 単一責任サービスモジュール群
-from service_state_manager import get_form_state, save_form_state, get_research_progress, get_research_results
+from service_state_manager import get_form_state, save_form_state, get_research_progress, get_research_results, get_starred_stock_summary
 from service_csv_manager import export_research_csv, import_research_csv
 from service_research_runner import start_research_job
 from service_oauth_handler import check_system_api_status
@@ -102,6 +102,10 @@ class WideStudioHandler(SimpleHTTPRequestHandler):
 
         elif clean_path == "/api/progress":
             self.send_json_response(get_research_progress())
+            return
+
+        elif clean_path == "/api/stock_summary":
+            self.send_json_response(get_starred_stock_summary())
             return
 
         elif clean_path == "/api/results":

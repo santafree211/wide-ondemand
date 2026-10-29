@@ -64,6 +64,51 @@ def get_research_progress() -> Dict[str, Any]:
             pass
     return prog
 
+def get_starred_stock_summary() -> Dict[str, Any]:
+    """
+    蓄積された★星1つ以上のキーワード総数（重複排除）および
+    Vol未取得の精鋭件数を取得
+    """
+    items = []
+    if DB_FILE.exists():
+        try:
+            with open(DB_FILE, "r", encoding="utf-8-sig") as f:
+                raw = json.load(f)
+                items = raw.get("keywords", [])
+        except Exception:
+            pass
+
+    starred_items = [
+        it for it in items
+        if it.get("star_rating") and it.get("star_rating") != "-" and "★" in str(it.get("star_rating"))
+    ]
+
+    # キーワード名で重複排除
+    unique_starred_dict = {}
+    for it in starred_items:
+        kw = it.get("keyword")
+        if kw:
+            if kw not in unique_starred_dict:
+                unique_starred_dict[kw] = it
+            else:
+                # Volが既に入っているレコードがあれば優先
+                if it.get("volume") is not None:
+                    unique_starred_dict[kw] = it
+
+    total_starred = len(unique_starred_dict)
+    unmeasured = [
+        kw for kw, it in unique_starred_dict.items()
+        if it.get("volume") is None
+    ]
+    unmeasured_count = len(unmeasured)
+
+    return {
+        "total_starred": total_starred,
+        "unmeasured_count": unmeasured_count,
+        "measured_count": total_starred - unmeasured_count,
+        "target_keywords": unmeasured
+    }
+
 def get_research_results(target_seed: str = "") -> List[Dict[str, Any]]:
     """
     指定シードキーワードに厳格一致するリサーチ結果を取得。

@@ -119,24 +119,20 @@ async function checkSystemStatus() {
         badge.style.color = "#fca5a5";
       }
     } else if (statusCode === 403 || data.quota_exhausted) {
-      window.isQuotaExhausted = true;
-      if (banner) banner.style.display = "block";
-      if (bannerTitle) bannerTitle.innerText = "⚠️ Ubersuggest 日次レポート上限到達 (HTTP 403)";
-      if (bannerDesc) bannerDesc.innerHTML = "本日分の日次レポート枠（100回/日）が枯渇したため、新規のVol/SD取得が一時停止されています。<br>日付変更（0時リセット）後に自動再開されます。";
+      window.isQuotaExhausted = false; // 2,000枠のSERPやバッチをブロックしない
+      if (banner) banner.style.display = "none"; // ユーザー要望により403警告バナーは非表示
       if (badge) {
-        badge.innerText = "上限到達 (100/100)";
-        badge.style.background = "#7f1d1d";
-        badge.style.color = "#f87171";
+        badge.innerText = "認証済 (OK)";
+        badge.style.background = "#064e3b";
+        badge.style.color = "#34d399";
       }
     } else if (statusCode === 429) {
-      window.isQuotaExhausted = true;
-      if (banner) banner.style.display = "block";
-      if (bannerTitle) bannerTitle.innerText = "⏳ 一時的なアクセス過多 (HTTP 429: Rate Limited)";
-      if (bannerDesc) bannerDesc.innerHTML = "短時間に連続アクセスがあったため制限されています。1分ほどお待ちいただくと自動解除されます。";
+      window.isQuotaExhausted = false;
+      if (banner) banner.style.display = "none";
       if (badge) {
-        badge.innerText = "レート制限中 (429)";
-        badge.style.background = "#78350f";
-        badge.style.color = "#fde68a";
+        badge.innerText = "認証済 (OK)";
+        badge.style.background = "#064e3b";
+        badge.style.color = "#34d399";
       }
     } else {
       window.isQuotaExhausted = false;
@@ -148,6 +144,7 @@ async function checkSystemStatus() {
       }
     }
     if (typeof updateMeter === "function") updateMeter();
+    if (typeof updateStockSummary === "function") updateStockSummary();
   } catch (e) {
     console.error("Status check error:", e);
   }
