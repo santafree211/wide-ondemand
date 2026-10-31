@@ -8,8 +8,13 @@
 </head>
 <body>
 
-  <header>
-    <div class="title">⚡ wide Studio</div>
+  <header style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="title" style="display: flex; align-items: center; gap: 8px;">
+      ⚡ wide Studio
+      <button onclick="location.reload(true)" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #0284c7; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="パネルを最新化（リロード）">
+        🔄 画面リロード
+      </button>
+    </div>
     <div class="badge badge-auth" id="auth-badge">認証済</div>
   </header>
 
