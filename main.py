@@ -33,6 +33,7 @@ from service_state_manager import get_form_state, save_form_state, get_research_
 from service_csv_manager import export_research_csv, import_research_csv
 from service_research_runner import start_research_job
 from service_oauth_handler import check_system_api_status
+from service_stock_daemon import start_stock_monitor_daemon, check_and_trigger_auto_batch
 
 PORT = int(os.environ.get("ANTIGRAVITY_SIDECAR_WEB_PORT", 8899))
 HERE = Path(__file__).parent.resolve()
@@ -201,6 +202,9 @@ class WideStudioHandler(SimpleHTTPRequestHandler):
         self.wfile.write(msg.encode("utf-8"))
 
 def run():
+    # 500件蓄積監視デーモンスレッドを自動起動
+    start_stock_monitor_daemon()
+
     server_address = ("127.0.0.1", PORT)
     httpd = HTTPServer(server_address, WideStudioHandler)
     print(f"wide Studio UI server listening on http://127.0.0.1:{PORT}")
