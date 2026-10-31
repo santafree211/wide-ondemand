@@ -209,20 +209,6 @@ async function updateStockSummary() {
       const pct = Math.min((unmeasured / 500) * 100, 100);
       poolFill.style.width = `${pct}%`;
     }
-
-    if (btnRun) {
-      if (unmeasured > 0) {
-        btnRun.disabled = false;
-        btnRun.style.background = "linear-gradient(135deg, #10b981, #059669)";
-        btnRun.style.cursor = "pointer";
-        btnRun.innerText = `🚀 2. 蓄積精鋭KWを一括Vol取得 (★${unmeasured}件 / API消費: 1回)`;
-      } else {
-        btnRun.disabled = true;
-        btnRun.style.background = "#475569";
-        btnRun.style.cursor = "not-allowed";
-        btnRun.innerText = `🚀 2. 蓄積精鋭KWを一括Vol取得 (星付きKWを蓄積中...)`;
-      }
-    }
   } catch (e) {
     console.error("Stock summary error:", e);
   }

@@ -58,16 +58,16 @@
   </div>
 
   <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
-    <!-- ステップ1: Google実測SERP星判定ボタン (1日2,000枠活用・常時実行可能) -->
+    <!-- Google実測SERP星判定ボタン (1日2,000枠活用・常時実行可能) -->
     <button class="btn-serp" id="btn-serp" onclick="executeSerpOnly()" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 10px rgba(14, 165, 233, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px;">
-      🔍 1. Google実測SERP星判定を実行 (公式2,000枠活用)
+      🔍 Google実測SERP星判定を実行 (公式2,000枠活用)
     </button>
 
     <!-- ★星付き精鋭キーワード蓄積プール（カウンター＆メーター） -->
     <div id="stock-pool-box" style="background: #0f172a; border: 1px solid #38bdf8; border-radius: 6px; padding: 10px; box-shadow: 0 4px 10px rgba(56, 189, 248, 0.1);">
       <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px;">
         <span style="font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
-          🌟 星付き精鋭キーワード蓄積プール
+          🌟 星付き精鋭キーワード自動蓄積プール
         </span>
         <span id="stock-pool-text" style="font-weight: bold; color: #facc15;">蓄積中: 0 / 500 件</span>
       </div>
@@ -76,14 +76,9 @@
       </div>
       <div style="font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between;">
         <span>重複排除済・Vol未取得: <strong id="stock-unmeasured-count" style="color: #38bdf8;">0</strong> 件</span>
-        <span style="color: #a78bfa;">🤖 500件到達で完全自動1-Shot実行</span>
+        <span style="color: #a78bfa; font-weight: bold;">🤖 500件到達で自動メガバッチ実行</span>
       </div>
     </div>
-
-    <!-- ステップ2: 手動でも即座に一括取得できるボタン -->
-    <button class="btn-run" id="btn-run" onclick="executeBatch()" style="width: 100%; padding: 10px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 6px;">
-      🚀 2. 今すぐ手動で一括Vol取得 (API消費: わずか1回)
-    </button>
   </div>
 
   <!-- リアルタイム進捗インジケーター -->
