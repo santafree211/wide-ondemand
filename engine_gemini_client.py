@@ -30,7 +30,7 @@ try:
 except Exception:
     pass
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+MODELS_TO_TRY = ["gemini-3.8-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
 
 PROMPT_TEMPLATE = """あなたはSEOと検索心理の最高峰の専門家です。
 以下のシードキーワードを徹底的に分析し、Googleサジェストの表面にはまだ現れていないが、
@@ -60,22 +60,37 @@ def generate_keywords_via_gemini(seed: str) -> Optional[List[str]]:
 
     try:
         # google-genai または google.generativeai を試行
+        raw_text = ""
+        prompt = PROMPT_TEMPLATE.format(seed=seed)
         try:
             from google import genai
             client = genai.Client(api_key=api_key)
-            prompt = PROMPT_TEMPLATE.format(seed=seed)
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt
-            )
-            raw_text = response.text
+            for m in MODELS_TO_TRY:
+                try:
+                    response = client.models.generate_content(model=m, contents=prompt)
+                    if response and response.text:
+                        raw_text = response.text
+                        break
+                except Exception:
+                    continue
         except Exception:
-            import google.generativeai as gai
-            gai.configure(api_key=api_key)
-            model = gai.GenerativeModel("gemini-1.5-flash")
-            prompt = PROMPT_TEMPLATE.format(seed=seed)
-            response = model.generate_content(prompt)
-            raw_text = response.text
+            pass
+
+        if not raw_text:
+            try:
+                import google.generativeai as gai
+                gai.configure(api_key=api_key)
+                for m in MODELS_TO_TRY:
+                    try:
+                        model = gai.GenerativeModel(m)
+                        response = model.generate_content(prompt)
+                        if response and response.text:
+                            raw_text = response.text
+                            break
+                    except Exception:
+                        continue
+            except Exception:
+                pass
 
         if not raw_text:
             return None
