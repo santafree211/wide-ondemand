@@ -17,6 +17,7 @@
 import re
 from typing import List
 from domain_attr_cost import match_domain_cost, is_incoherent_cost, get_fallback_cost_prefixes
+from domain_attr_fashion import match_domain_fashion, is_incoherent_fashion, get_fallback_fashion_prefixes
 
 # 比較・ランキング系サフィックス
 COMPARISON_SUFFIXES = [
@@ -48,6 +49,11 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
         if is_incoherent_cost(clean_p, clean_s):
             return True
 
+    # 4. ② ファッション・美容系属性モジュールによる排除判定
+    if match_domain_fashion(clean_s):
+        if is_incoherent_fashion(clean_p, clean_s):
+            return True
+
     # 4. 比較・違い系サフィックスに対する不要な動詞・助詞混入の排除
     is_comp_suffix = any(s_last == c or s_last.endswith(c) for c in COMPARISON_SUFFIXES)
     if is_comp_suffix:
@@ -73,6 +79,10 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
     # ① コスト・価格系の場合
     if match_domain_cost(clean_s):
         return get_fallback_cost_prefixes()
+
+    # ② ファッション・美容系の場合
+    if match_domain_fashion(clean_s):
+        return get_fallback_fashion_prefixes()
 
     # 比較・違い系の場合
     if any(s_last == c or s_last.endswith(c) for c in COMPARISON_SUFFIXES):
