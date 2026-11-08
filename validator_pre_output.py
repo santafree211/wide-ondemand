@@ -6,23 +6,26 @@
 ■ カテゴリ: Validation / 出力前自動品質検証プロセス（Pre-Output Quality Gate）
 ■ 責務・役割（Single Responsibility）:
   - 軸①・軸②の生成結果を出力・表示する直前に、全キーワードの構文・意味整合性を自動監査する。
-  - 不自然な語、重複語、文法崩れを1件も漏らさず検知・排除し、安全な候補で即座に補充して各軸25件を担保する。
+  - 不自然な語、重複語、文法崩れを1件も漏らさず検知・排除する。
+  - 25件未満の場合はGoogleサジェストハーベスターから追加実測クエリを補充し、人工合成語の混入を100%遮断する。
   - ルール03（事前出力バリデーション規約）を100%自動執行する。
 =============================================================================
 """
 
 from typing import Dict, List, Any, Tuple
-from validator_semantic_coherence import is_semantically_incoherent, get_fallback_prefixes_for_suffix
+from validator_semantic_coherence import is_semantically_incoherent
 from filter_prohibited_terms import is_prohibited_term
+from api_suggest_harvester import harvest_axis1_prefix_suggestions, harvest_axis2_suffix_suggestions
 
 def validate_and_repair_axis(
     axis_list: List[str],
     slot_fixed: str,
     is_prefix_fixed: bool,
+    seed_context: str = "",
     target_count: int = 25
 ) -> Tuple[List[str], List[Any]]:
     """
-    1つの軸リストに対して、出力直前の完全自動検証および不備語の自動修復・再補充を行う。
+    1つの軸リストに対して、出力直前の完全自動検証および不備語の排除・本物サジェストによる再補充を行う。
     """
     valid_items = []
     seen = set()
@@ -55,22 +58,27 @@ def validate_and_repair_axis(
         seen.add(clean_kw)
         valid_items.append(clean_kw)
 
-    # 4. 25件に満たない場合の自動補充プロセス
+    # 4. 25件に満たない場合の本物サジェスト再補充プロセス（合成語の生成は永久禁止）
     if len(valid_items) < target_count:
-        fallbacks = get_fallback_prefixes_for_suffix(slot_fixed)
-        for fb in fallbacks:
-            if is_prefix_fixed:
-                cand = f"{slot_fixed} {fb}"
-            else:
-                cand = f"{fb} {slot_fixed}"
+        if is_prefix_fixed:
+            fresh = harvest_axis1_prefix_suggestions(
+                prefix=slot_fixed,
+                suffix_context=seed_context,
+                target_count=target_count + 10
+            )
+        else:
+            fresh = harvest_axis2_suffix_suggestions(
+                suffix=slot_fixed,
+                seed_entity=seed_context,
+                target_count=target_count + 10
+            )
 
+        for cand in fresh:
             if cand in seen or is_prohibited_term(cand):
                 continue
-
             c_tokens = cand.split()
             if len(c_tokens) != len(set(c_tokens)):
                 continue
-
             p_part = c_tokens[0]
             s_part = " ".join(c_tokens[1:])
             if is_semantically_incoherent(p_part, s_part):
@@ -98,6 +106,7 @@ def run_pre_output_validation(axes_result: Dict[str, Any]) -> Dict[str, Any]:
         axes_result.get("axis1", []),
         slot_fixed=fixed_slot_1,
         is_prefix_fixed=True,
+        seed_context=slot_b,
         target_count=25
     )
 
@@ -107,6 +116,7 @@ def run_pre_output_validation(axes_result: Dict[str, Any]) -> Dict[str, Any]:
         axes_result.get("axis2", []),
         slot_fixed=fixed_slot_2,
         is_prefix_fixed=False,
+        seed_context=slot_a,
         target_count=25
     )
 
