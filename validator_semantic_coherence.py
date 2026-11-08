@@ -21,6 +21,7 @@ from domain_attr_fashion import match_domain_fashion, is_incoherent_fashion, get
 from domain_attr_howto import match_domain_howto, is_incoherent_howto, get_fallback_howto_prefixes
 from domain_attr_comparison import match_domain_comparison, is_incoherent_comparison, get_fallback_comparison_prefixes
 from domain_attr_trouble import match_domain_trouble, is_incoherent_trouble, get_fallback_trouble_prefixes
+from domain_attr_gourmet import match_domain_gourmet, is_incoherent_gourmet, get_fallback_gourmet_prefixes
 
 def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     """
@@ -67,6 +68,11 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
         if is_incoherent_trouble(clean_p, clean_s):
             return True
 
+    # 8. ⑥ 飲食・グルメ系属性モジュールによる排除判定
+    if match_domain_gourmet(clean_s):
+        if is_incoherent_gourmet(clean_p, clean_s):
+            return True
+
     # 7. 文法・品詞的なゴミ（英語の文法用語、活用形崩れ等）の排除
     grammatical_junk = ["英語", "意味", "とは", "画像", "wiki", "一覧", "例文", "類語"]
     if clean_p in grammatical_junk:
@@ -102,6 +108,10 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
     # ⑤ トラブル・悩み・不具合系の場合
     if match_domain_trouble(clean_s):
         return get_fallback_trouble_prefixes()
+
+    # ⑥ 飲食・グルメ系の場合
+    if match_domain_gourmet(clean_s):
+        return get_fallback_gourmet_prefixes()
 
     # デフォルト（道具・製品・一般対象）
     return [
