@@ -23,6 +23,7 @@ from domain_attr_comparison import match_domain_comparison, is_incoherent_compar
 from domain_attr_trouble import match_domain_trouble, is_incoherent_trouble, get_fallback_trouble_prefixes
 from domain_attr_gourmet import match_domain_gourmet, is_incoherent_gourmet, get_fallback_gourmet_prefixes
 from domain_attr_health import match_domain_health, is_incoherent_health, get_fallback_health_prefixes
+from domain_attr_gadget import match_domain_gadget, is_incoherent_gadget, get_fallback_gadget_prefixes
 
 def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     """
@@ -79,6 +80,11 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
         if is_incoherent_health(clean_p, clean_s):
             return True
 
+    # 10. ⑧ IT・ガジェット・機器系属性モジュールによる排除判定
+    if match_domain_gadget(clean_s):
+        if is_incoherent_gadget(clean_p, clean_s):
+            return True
+
     # 7. 文法・品詞的なゴミ（英語の文法用語、活用形崩れ等）の排除
     grammatical_junk = ["英語", "意味", "とは", "画像", "wiki", "一覧", "例文", "類語"]
     if clean_p in grammatical_junk:
@@ -122,6 +128,10 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
     # ⑦ 健康・体質・医療系の場合
     if match_domain_health(clean_s):
         return get_fallback_health_prefixes()
+
+    # ⑧ IT・ガジェット・機器系の場合
+    if match_domain_gadget(clean_s):
+        return get_fallback_gadget_prefixes()
 
     # デフォルト（道具・製品・一般対象）
     return [
