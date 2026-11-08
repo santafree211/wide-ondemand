@@ -17,6 +17,7 @@ from typing import Dict, List, Any
 from api_suggest_client import fetch_search_suggestions
 from engine_semantic_family import detect_semantic_family, detect_scale_family
 from filter_prohibited_terms import is_prohibited_term
+from validator_semantic_coherence import is_semantically_incoherent, get_fallback_prefixes_for_suffix
 
 HIGH_RETENTION_TERMS = [
     "作り方", "使い方", "代用", "代わり", "人気", "おすすめ", "簡単", "自作",
@@ -87,19 +88,20 @@ def generate_2word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
             parts = c.split()
             other_parts = [p for p in parts if p != slot_b]
             if other_parts:
-                cand = f"{' '.join(other_parts)} {slot_b}"
+                prefix_cand = ' '.join(other_parts)
+                if is_semantically_incoherent(prefix_cand, slot_b):
+                    continue
+                cand = f"{prefix_cand} {slot_b}"
                 if cand != clean_seed and not is_prohibited_term(cand):
                     axis2_set.add(cand)
             if len(axis2_set) >= 25:
                 break
 
     if len(axis2_set) < 25:
-        BACKUP_EXPANSIONS = [
-            "やり方", "コツ", "人気", "おすすめ", "種類", "選び方", "基本",
-            "失敗", "注意点", "アレンジ", "簡単", "初心者", "プロ", "道具",
-            "費用", "時間", "メリット", "デメリット", "理由", "手順"
-        ]
-        for t in BACKUP_EXPANSIONS:
+        fallbacks = get_fallback_prefixes_for_suffix(slot_b)
+        for t in fallbacks:
+            if is_semantically_incoherent(t, slot_b):
+                continue
             cand = f"{t} {slot_b}"
             if cand != clean_seed and not is_prohibited_term(cand):
                 axis2_set.add(cand)

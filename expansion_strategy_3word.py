@@ -17,11 +17,13 @@ from typing import Dict, List, Any
 from api_suggest_client import fetch_search_suggestions
 from engine_semantic_family import detect_semantic_family, detect_scale_family
 from filter_prohibited_terms import is_prohibited_term
+from validator_semantic_coherence import is_semantically_incoherent, get_fallback_prefixes_for_suffix
 
 INTENT_EXTENSIONS = [
     "おすすめ", "人気", "無料", "やり方", "コツ", "比較", "違い", "初心者",
-    "ランキング", "選び方", "使い方", "理由", "デメリット", "簡単", "プロ",
-    "基本", "注意点", "アレンジ", "失敗", "自作", "安全", "効果", "時間"
+    "ランキング", "選び方", "使い方", "理由", "デメリット", "メリット", "簡単", "プロ",
+    "基本", "注意点", "アレンジ", "失敗", "自作", "安全", "効果", "時間",
+    "相場", "費用", "目安", "最新", "定番", "仕組み", "長持ち", "お手入れ"
 ]
 
 def generate_3word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
@@ -79,18 +81,20 @@ def generate_3word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
             parts = c.split()
             other_parts = [p for p in parts if p not in [slot_b, slot_c]]
             if other_parts:
-                cand = f"{' '.join(other_parts)} {suffix_pair}"
+                cand_p = ' '.join(other_parts)
+                if is_semantically_incoherent(cand_p, suffix_pair):
+                    continue
+                cand = f"{cand_p} {suffix_pair}"
                 if cand != clean_seed and not is_prohibited_term(cand):
                     axis2_set.add(cand)
             if len(axis2_set) >= 25:
                 break
 
     if len(axis2_set) < 25:
-        ALT_PREFIXES = [
-            "おすすめ", "人気", "最新", "プロ", "簡単", "初心者", "定番",
-            "安い", "高評価", "話題", "便利", "基本", "失敗しない", "おしゃれ"
-        ]
-        for p in ALT_PREFIXES:
+        fallbacks = get_fallback_prefixes_for_suffix(suffix_pair)
+        for p in fallbacks:
+            if is_semantically_incoherent(p, suffix_pair):
+                continue
             cand = f"{p} {suffix_pair}"
             if cand != clean_seed and not is_prohibited_term(cand):
                 axis2_set.add(cand)
