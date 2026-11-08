@@ -5,160 +5,82 @@
 ■ モジュール名: generator_blue_ocean.py
 ■ カテゴリ: Blue Ocean / 第3の軸（AI創造性・視点ずらし枠）生成エンジン
 ■ 責務・役割（Single Responsibility）:
-  - シードキーワードの深層文脈（調理、美術、清掃、釣り、一般）を解析。
-  - 「需要が堅いシャープな2語（約15件）」＋「文脈完全合致のキラー意図3語（約10件）」の
-    黄金ハイブリッド設計で、競合不在のブルーオーシャンKWをきっかり25件生成する。
-  - 文脈にそぐわない無意味な語（マナー、持ち物等）は完全排除し、
-    読者の深い悩み（コツ、デメリット、失敗救済、代用、越境）に特化。
+  - 1st Priority: Gemini API（AI意味推論）により、シードキーワードの深層心理と
+    文脈に100%適合した「2語中心（15件）」＋「自然な3語インテント（10件）」を生成。
+  - 2nd Priority (Fallback / オフライン): 精密なオントロジー分類エンジンにより、
+    ゲーム/学習/料理/酒/美容/汎用抽象概念の文脈不一致語（100均・一人暮らし等）を
+    完全排除した安全な25件を即座に生成する。
 ==============================================================================
 """
 
 import re
 from typing import List
 from filter_prohibited_terms import is_prohibited_term
+from engine_gemini_client import generate_keywords_via_gemini
 
-def detect_seed_theme(seed: str) -> str:
+def detect_seed_ontology(seed: str) -> str:
     s = seed.lower()
-    if any(w in s for w in ["ウイスキー", "シーバスリーガル", "山崎", "白州", "響", "マッカラン", "ハイボール", "酒", "ワイン"]):
-        return "whisky"
-    if any(w in s for w in ["魚", "シーバス", "ブラックバス", "釣り", "ルアー", "スズキ", "アジ", "サバ"]):
-        return "fishing_eating"
-    if any(w in s for w in ["色", "絵の具", "水彩", "アクリル", "混色", "カラー", "イラスト"]):
-        return "color_art"
-    if any(w in s for w in ["インク", "汚れ", "シミ", "落ちない", "落とす", "染み", "洗濯", "カビ"]):
-        return "cleaning"
-    if any(w in s for w in ["レシピ", "フライパン", "料理", "食べる", "肉", "焼き", "煮", "ケーキ", "スイーツ"]):
+    # 学習・教育・ゲーム・パズル・試験
+    if any(w in s for w in ["アルゴロジック", "解答", "答え", "過去問", "数学", "英語", "プログラミング", "問題", "攻略", "検定", "資格", "模試", "テスト", "ドリル", "勉強"]):
+        return "edu_game"
+    # 酒・嗜好品・飲料
+    if any(w in s for w in ["ウイスキー", "シーバスリーガル", "山崎", "白州", "響", "マッカラン", "ハイボール", "酒", "ワイン", "ビール", "コーヒー", "紅茶"]):
+        return "whisky_drink"
+    # 料理・食品・調理
+    if any(w in s for w in ["レシピ", "フライパン", "料理", "食べる", "肉", "焼き", "煮", "ケーキ", "スイーツ", "食材", "調理"]):
         return "cooking"
-    return "general"
+    # 美容・コスメ・スキンケア
+    if any(w in s for w in ["リップ", "コスメ", "メイク", "肌", "化粧", "シャンプー", "ネイル", "髪", "スキンケア"]):
+        return "beauty"
+    # 色・アート・美術
+    if any(w in s for w in ["色", "絵の具", "水彩", "アクリル", "混色", "カラー", "イラスト"]):
+        return "art"
+    return "abstract_general"
 
 def generate_blue_ocean_keywords(seed: str, slot_a: str = "", slot_b: str = "") -> List[str]:
     """
     シードキーワードから「堅牢な2語（15件）」＋「キラー意図3語（10件）」を生成する。
+    Gemini APIが有効ならAI意味推論を優先し、未設定時はオントロジー安全網で生成。
     """
     clean_seed = re.sub(r'[\s\u3000]+', ' ', seed).strip()
     tokens = clean_seed.split()
 
+    # 1st Priority: Gemini AI による動的意味推論
+    ai_results = generate_keywords_via_gemini(clean_seed)
+    if ai_results and len(ai_results) >= 20:
+        return ai_results[:25]
+
+    # 2nd Priority: 精密オントロジー安全網（フォールバック）
     p_entity = slot_a.split()[0] if slot_a else (tokens[0] if tokens else "対象")
     p_action = slot_b if slot_b else (" ".join(tokens[1:]) if len(tokens) > 1 else "方法")
     s_action = tokens[-1] if len(tokens) > 1 else "方法"
 
-    theme = detect_seed_theme(clean_seed)
+    ontology = detect_seed_ontology(clean_seed)
 
-    two_word_cands: List[str] = []
-    three_word_cands: List[str] = []
-
-    if theme == "cooking":
-        # 【堅牢な2語】越境・失敗救済・プロ質感（15件）
-        two_word_cands = [
-            f"塊肉 {s_action}", f"ジビエ {s_action}", f"ラム肉 {s_action}",
-            f"鹿肉 {s_action}", f"鴨肉 {s_action}",
-            f"{p_entity} 焼きすぎ", f"{p_entity} 生焼け", f"{p_entity} パサパサ",
-            f"{p_entity} 救済", f"{p_entity} 再加熱",
-            f"メイラード 焼き色", f"塊肉 芯温", f"{p_entity} 肉汁",
-            f"{p_entity} 火入れ", f"塊肉 休ませる"
+    if ontology == "edu_game":
+        # 学習・パズル・教育: ズル、最少手順、星3、ループなど（100均や一人暮らしは完全排除）
+        two_words = [
+            f"{p_entity} 最少手順", f"{p_entity} ループ", f"{p_entity} ズル判定",
+            f"{p_entity} 星3", f"{p_entity} 裏ワザ", f"{p_entity} 旗スキップ",
+            f"{p_entity} 思考力", f"{p_entity} 最短ルート", f"{p_entity} つまずき",
+            f"{p_entity} 小学生", f"{p_entity} 自力", f"{p_entity} 解き方 コツ",
+            f"{p_entity} 応用問題", f"{p_entity} 発展", f"{p_entity} やり直し"
         ]
-        # 【キラー意図3語】文脈完全合致のノウハウ・制約（10件）
-        three_word_cands = [
-            f"コツ {p_action}",
-            f"デメリット {p_action}",
-            f"失敗しない {p_action}",
-            f"注意点 {p_action}",
-            f"メリット {p_action}",
-            f"{p_entity} {p_action} ホイルなし",
-            f"{p_entity} {p_action} タコ糸なし",
-            f"{p_entity} {p_action} 温度計なし",
-            f"{p_entity} {p_action} 前日仕込み",
-            f"{p_entity} {p_action} 少量2人分"
+        three_words = [
+            f"自力で解く {clean_seed} コツ",
+            f"答えを見ない {clean_seed} 方法",
+            f"最少ステップ {clean_seed} 裏ワザ",
+            f"星3を取る {clean_seed} 手順",
+            f"小学生 わかりやすい {clean_seed}",
+            f"プログラミング的思考 {clean_seed}",
+            f"最短クリア {clean_seed} コツ",
+            f"つまずきやすい {clean_seed} 解説",
+            f"失敗しない {clean_seed} 考え方",
+            f"授業で使える {clean_seed} 活用"
         ]
 
-    elif theme == "color_art":
-        # 【堅牢な2語】越境・混色トラブル・プロ色名（15件）
-        two_word_cands = [
-            f"アイシングクッキー {p_entity}", f"レジン {p_entity}",
-            f"ネイル {p_entity}", f"革靴 {p_entity}", f"サビ塗装 {p_entity}",
-            f"{p_entity} 代用", f"{p_entity} 黒なし", f"混色 3原色",
-            f"{p_entity} 濁り", f"混色 濁る", f"{p_entity} 濃すぎ",
-            f"絵の具 復活", f"テラコッタ 混色", f"くすみモカ 絵の具",
-            f"こげ茶 黄金比"
-        ]
-        # 【キラー意図3語】（10件）
-        intent_prefix = f"コツ {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} {p_action} コツ"
-        intent_demerit = f"デメリット {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} {p_action} デメリット"
-        intent_fail = f"失敗しない {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} {p_action} 失敗しない"
-        intent_caution = f"注意点 {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} {p_action} 注意点"
-
-        three_word_cands = [
-            intent_prefix,
-            intent_demerit,
-            intent_fail,
-            intent_caution,
-            f"黒を使わない {p_entity} 作り方",
-            f"3原色だけで {p_entity} 作り方",
-            f"{p_entity} 絵の具 代用",
-            f"{p_entity} 濁った 直し方",
-            f"水彩 混色 濁らないコツ",
-            f"透明感のある{p_entity} 作り方"
-        ]
-
-    elif theme == "cleaning":
-        # 【堅牢な2語】越境素材・トラブル（15件）
-        two_word_cands = [
-            f"革靴 {s_action}", f"壁紙 {s_action}", f"スニーカー {s_action}",
-            f"カーペット {s_action}", f"車シート {s_action}",
-            f"{s_action} 放置", f"{s_action} 乾燥後", f"{s_action} 洗濯後",
-            f"輪ジミ 直し方", f"色落ち 補修",
-            f"油性水性 見分け方", f"ベンジン 染み抜き",
-            f"エタノール 染み抜き", f"熱湯 染み抜き", f"界面活性剤 分解"
-        ]
-        # 【キラー意図3語】（10件）
-        intent_prefix = f"コツ {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} {s_action} コツ"
-        intent_demerit = f"注意点 {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} {s_action} 注意点"
-        intent_fail = f"失敗しない {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} {s_action} 失敗しない"
-
-        three_word_cands = [
-            intent_prefix,
-            intent_demerit,
-            intent_fail,
-            f"{s_action} 除光液なし",
-            f"{s_action} ウタマロなし",
-            f"水洗いできない {p_entity} {s_action}",
-            f"時間が経った {clean_seed}",
-            f"外出先 応急処置 {s_action}",
-            f"学校 制服 {s_action}",
-            f"洗剤を使わない {s_action} 落とし方"
-        ]
-
-    elif theme == "fishing_eating":
-        # 【堅牢な2語】怪魚・下処理・仕立て（15件）
-        two_word_cands = [
-            f"深海魚 食べる", f"怪魚 食べる", f"ウツボ 食べる",
-            f"エイ 食べる", f"サメ 食べる",
-            f"{p_entity} 泥臭い", f"{p_entity} 臭み消し", f"{p_entity} 焼きすぎ",
-            f"{p_entity} 血抜き失敗", f"津本式 究極血抜き",
-            f"{p_entity} 熟成刺身", f"{p_entity} 潮汁", f"{p_entity} 昆布締め",
-            f"{p_entity} 皮パリパリ", f"釣り場 下処理"
-        ]
-        # 【キラー意図3語】（10件）
-        intent_prefix = f"コツ {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} 食べる コツ"
-        intent_demerit = f"デメリット {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} 食べる 注意点"
-        intent_fail = f"失敗しない {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} 失敗しない 料理"
-
-        three_word_cands = [
-            intent_prefix,
-            intent_demerit,
-            intent_fail,
-            f"{p_entity} 生食 危険 回避",
-            f"{p_entity} 刺身 アニサキス 冷凍時間",
-            f"{p_entity} 臭み消し 牛乳なし",
-            f"{p_entity} 釣り場での下処理 手順",
-            f"{p_entity} 大量消費 冷凍 保存食",
-            f"{p_entity} 津本式 血抜き コツ",
-            f"{p_entity} 美味しい 食べ方 コツ"
-        ]
-
-    elif theme == "whisky":
-        # 【堅牢な2語】洋酒種類・飲み方・ボトル価値（15件）
-        two_word_cands = [
+    elif ontology == "whisky_drink":
+        two_words = [
             f"シングルモルト {s_action}", f"ブレンデッド {s_action}", f"スコッチ {s_action}",
             f"ジャパニーズ {s_action}", f"バーボン {s_action}",
             f"{p_entity} ハイボール", f"{p_entity} ロック", f"{p_entity} 水割り",
@@ -166,74 +88,69 @@ def generate_blue_ocean_keywords(seed: str, slot_a: str = "", slot_b: str = "") 
             f"{p_entity} 定価", f"{p_entity} プレ値", f"{p_entity} 終売",
             f"{p_entity} 旧ボトル", f"{p_entity} 特級"
         ]
-        # 【キラー意図3語】（10件）
-        three_word_cands = [
-            f"{clean_seed} 飲み方",
-            f"{clean_seed} 定価",
-            f"{clean_seed} 評価",
-            f"{clean_seed} 味",
-            f"{clean_seed} ハイボール 比率",
-            f"{clean_seed} ミズナラ 違い",
-            f"{p_entity} 12年 18年 比較",
-            f"{clean_seed} まずい 理由",
-            f"{clean_seed} 美味しい 飲み方",
+        three_words = [
+            f"{clean_seed} 飲み方", f"{clean_seed} 定価", f"{clean_seed} 評価",
+            f"{clean_seed} 味", f"{clean_seed} ハイボール 比率",
+            f"{clean_seed} ミズナラ 違い", f"{p_entity} 12年 18年 比較",
+            f"{clean_seed} まずい 理由", f"{clean_seed} 美味しい 飲み方",
             f"{clean_seed} おすすめ グラス"
         ]
 
-    else: # general
-        two_word_cands = [
-            f"プロ用 {p_entity}", f"海外 {p_entity}", f"業務用 {p_entity}",
-            f"自作 {p_entity}", f"{p_entity} やり直し", f"{p_entity} 失敗対処",
-            f"{p_entity} 復元", f"{p_entity} 原理", f"{p_entity} 仕組み",
-            f"{p_entity} 黄金比", f"{p_entity} 道具なし", f"{p_entity} 100均代用",
-            f"一人暮らし {p_entity}", f"忙しい人 {p_entity}", f"{p_entity} 最短"
+    elif ontology == "cooking":
+        two_words = [
+            f"塊肉 {s_action}", f"ジビエ {s_action}", f"ラム肉 {s_action}",
+            f"鹿肉 {s_action}", f"鴨肉 {s_action}",
+            f"{p_entity} 焼きすぎ", f"{p_entity} 生焼け", f"{p_entity} パサパサ",
+            f"{p_entity} 救済", f"{p_entity} 再加熱",
+            f"メイラード 焼き色", f"塊肉 芯温", f"{p_entity} 肉汁",
+            f"{p_entity} 火入れ", f"塊肉 休ませる"
         ]
-        intent_prefix = f"コツ {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} コツ"
-        intent_demerit = f"デメリット {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} デメリット"
-        intent_fail = f"失敗しない {p_action}" if len(p_action.split()) >= 2 else f"{p_entity} 失敗しない コツ"
-
-        three_word_cands = [
-            intent_prefix,
-            intent_demerit,
-            intent_fail,
-            f"お金をかけない {clean_seed}",
-            f"専用道具なし {clean_seed}",
-            f"{clean_seed} 失敗したときの対処",
-            f"{clean_seed} プロが教える裏技",
-            f"初心者 失敗しない {clean_seed}",
-            f"{clean_seed} 仕組み 原理",
-            f"{clean_seed} メリット デメリット"
+        three_words = [
+            f"コツ {p_action}", f"デメリット {p_action}", f"失敗しない {p_action}",
+            f"注意点 {p_action}", f"メリット {p_action}",
+            f"{p_entity} {p_action} ホイルなし", f"{p_entity} {p_action} タコ糸なし",
+            f"{p_entity} {p_action} 温度計なし", f"{p_entity} {p_action} 前日仕込み",
+            f"{p_entity} {p_action} 少量2人分"
         ]
 
-    result = []
+    elif ontology == "beauty":
+        two_words = [
+            f"{p_entity} 荒れる", f"{p_entity} 皮剥け", f"{p_entity} 落ちない",
+            f"{p_entity} ブルベ", f"{p_entity} イエベ", f"{p_entity} 色素沈着",
+            f"{p_entity} 成分", f"{p_entity} 落とし方", f"{p_entity} 下地",
+            f"{p_entity} 乾燥対策", f"{p_entity} 塗り直し", f"{p_entity} 縦じわ",
+            f"{p_entity} 密着", f"{p_entity} 発色", f"{p_entity} 似合わない"
+        ]
+        three_words = [
+            f"荒れない {clean_seed} 塗り方", f"落ちない {clean_seed} コツ",
+            f"ブルベ夏 {clean_seed} 選び方", f"乾燥しない {clean_seed} 下地",
+            f"皮剥けしない {clean_seed} 対策", f"クレンジング不要 {clean_seed}",
+            f"マスクにつかない {clean_seed}", f"初心者 {clean_seed} 失敗しない",
+            f"買ってよかった {clean_seed} 比較", f"パーソナルカラー {clean_seed}"
+        ]
+
+    else: # abstract_general（絶対に100均・一人暮らし等の生活偏重単語を使わない汎用安全枠）
+        two_words = [
+            f"{p_entity} 原理", f"{p_entity} 仕組み", f"{p_entity} 基礎知識",
+            f"{p_entity} 向き不向き", f"{p_entity} メリット", f"{p_entity} デメリット",
+            f"{p_entity} 注意点", f"{p_entity} 失敗原因", f"{p_entity} つまずき",
+            f"{p_entity} プロ視点", f"{p_entity} 本質", f"{p_entity} 比較基準",
+            f"{p_entity} 選び方", f"{p_entity} 見落とし", f"{p_entity} リスク"
+        ]
+        three_words = [
+            f"失敗しない {p_entity} コツ", f"知っておくべき {p_entity} 注意点",
+            f"初心者向け {p_entity} 基礎", f"プロが教える {p_entity} ポイント",
+            f"後悔しない {p_entity} 選び方", f"{p_entity} メリット デメリット 比較",
+            f"よくある {p_entity} 失敗パターン", f"効率的な {p_entity} 手順",
+            f"安全な {p_entity} 進め方", f"おすすめの {p_entity} 活用法"
+        ]
+
+    merged = []
     seen = set()
+    for kw in two_words + three_words:
+        kw_clean = re.sub(r'[\s\u3000]+', ' ', kw).strip()
+        if kw_clean and kw_clean != clean_seed and kw_clean not in seen and not is_prohibited_term(kw_clean):
+            seen.add(kw_clean)
+            merged.append(kw_clean)
 
-    # 1. 堅牢な2語を先頭から最大15件
-    for kw in two_word_cands:
-        clean_kw = re.sub(r'[\s\u3000]+', ' ', kw).strip()
-        if clean_kw and clean_kw not in seen and not is_prohibited_term(clean_kw):
-            seen.add(clean_kw)
-            result.append(clean_kw)
-        if len(result) >= 15:
-            break
-
-    # 2. キラー意図の3語を合流させて合計25件を満たす
-    for kw in three_word_cands:
-        clean_kw = re.sub(r'[\s\u3000]+', ' ', kw).strip()
-        if clean_kw and clean_kw not in seen and not is_prohibited_term(clean_kw):
-            seen.add(clean_kw)
-            result.append(clean_kw)
-        if len(result) >= 25:
-            break
-
-    # 不足時のセーフティ補充
-    if len(result) < 25:
-        for kw in two_word_cands + three_word_cands:
-            clean_kw = re.sub(r'[\s\u3000]+', ' ', kw).strip()
-            if clean_kw and clean_kw not in seen and not is_prohibited_term(clean_kw):
-                seen.add(clean_kw)
-                result.append(clean_kw)
-            if len(result) >= 25:
-                break
-
-    return result[:25]
+    return merged[:25]
