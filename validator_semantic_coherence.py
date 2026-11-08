@@ -30,6 +30,7 @@ from domain_attr_career import match_domain_career, is_incoherent_career, get_fa
 from domain_attr_ceremony import match_domain_ceremony, is_incoherent_ceremony, get_fallback_ceremony_prefixes
 from domain_attr_living import match_domain_living, is_incoherent_living, get_fallback_living_prefixes
 from domain_attr_money import match_domain_money, is_incoherent_money, get_fallback_money_prefixes
+from domain_attr_parenting import match_domain_parenting, is_incoherent_parenting, get_fallback_parenting_prefixes
 
 def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     """
@@ -121,6 +122,11 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
         if is_incoherent_money(clean_p, clean_s):
             return True
 
+    # 17. ⑮ 子育て・育児・知育系属性モジュールによる排除判定
+    if match_domain_parenting(clean_s):
+        if is_incoherent_parenting(clean_p, clean_s):
+            return True
+
     # 14. 文法・品詞的なゴミ（英語の文法用語、活用形崩れ等）の排除
     grammatical_junk = ["英語", "意味", "とは", "画像", "wiki", "一覧", "類語"]
     if clean_p in grammatical_junk:
@@ -192,6 +198,10 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
     # ⑭ 金融・資産運用・保険・クレカ系の場合
     if match_domain_money(clean_s):
         return get_fallback_money_prefixes()
+
+    # ⑮ 子育て・育児・知育系の場合
+    if match_domain_parenting(clean_s):
+        return get_fallback_parenting_prefixes()
 
     # デフォルト（道具・製品・一般対象）
     return [
