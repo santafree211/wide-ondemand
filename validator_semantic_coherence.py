@@ -19,11 +19,7 @@ from typing import List
 from domain_attr_cost import match_domain_cost, is_incoherent_cost, get_fallback_cost_prefixes
 from domain_attr_fashion import match_domain_fashion, is_incoherent_fashion, get_fallback_fashion_prefixes
 from domain_attr_howto import match_domain_howto, is_incoherent_howto, get_fallback_howto_prefixes
-
-# 比較・ランキング系サフィックス
-COMPARISON_SUFFIXES = [
-    "比較", "ランキング", "一覧", "まとめ", "違い"
-]
+from domain_attr_comparison import match_domain_comparison, is_incoherent_comparison, get_fallback_comparison_prefixes
 
 def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     """
@@ -60,13 +56,12 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
         if is_incoherent_howto(clean_p, clean_s):
             return True
 
-    # 4. 比較・違い系サフィックスに対する不要な動詞・助詞混入の排除
-    is_comp_suffix = any(s_last == c or s_last.endswith(c) for c in COMPARISON_SUFFIXES)
-    if is_comp_suffix:
-        if any(w in clean_p for w in ["比較", "違い", "ランキング", "して", "する", "的", "級"]):
+    # 6. ④ 比較・評価・選定系属性モジュールによる排除判定
+    if match_domain_comparison(clean_s):
+        if is_incoherent_comparison(clean_p, clean_s):
             return True
 
-    # 5. 文法・品詞的なゴミ（英語の文法用語、活用形崩れ等）の排除
+    # 7. 文法・品詞的なゴミ（英語の文法用語、活用形崩れ等）の排除
     grammatical_junk = ["英語", "意味", "とは", "画像", "wiki", "一覧", "例文", "類語"]
     if clean_p in grammatical_junk:
         return True
@@ -94,14 +89,9 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
     if match_domain_howto(clean_s):
         return get_fallback_howto_prefixes()
 
-    # 比較・違い系の場合
-    if any(s_last == c or s_last.endswith(c) for c in COMPARISON_SUFFIXES):
-        return [
-            "おすすめ", "人気", "最新", "プロ", "定番", "安い", "コスパ",
-            "初心者", "評判", "口コミ", "徹底", "主要", "人気ブランド", "話題",
-            "特徴", "性能", "使いやすさ", "機能", "メリット", "デメリット",
-            "デザイン", "価格", "満足度", "耐久性", "シェア", "スペック"
-        ]
+    # ④ 比較・評価・選定系の場合
+    if match_domain_comparison(clean_s):
+        return get_fallback_comparison_prefixes()
 
     # デフォルト（道具・製品・一般対象）
     return [
