@@ -18,6 +18,10 @@ from api_suggest_client import fetch_search_suggestions
 from engine_semantic_family import detect_semantic_family, detect_scale_family
 from filter_prohibited_terms import is_prohibited_term
 from validator_semantic_coherence import is_semantically_incoherent, get_fallback_prefixes_for_suffix
+from engine_context_harmonizer import (
+    analyze_seed_context, get_harmonized_axis1_terms, get_harmonized_axis2_entities,
+    is_contextually_incoherent
+)
 
 HIGH_RETENTION_TERMS = [
     "作り方", "使い方", "代用", "代わり", "人気", "おすすめ", "簡単", "自作",
@@ -39,7 +43,11 @@ def generate_2word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
     slot_a = tokens[0]
     slot_b = tokens[1]
 
+    # 【シード文脈・相互整合解析】AとBの関係性から統合テーマを特定
+    context_info = analyze_seed_context(slot_a, slot_b)
+
     # --- 軸①: [A] 〇〇 (前固定) ---
+    # Bの文脈（食べる、値段、汚れ等）と調和する語句を優先注入
     axis1_set = set()
     sugg_a1 = fetch_search_suggestions(f"{slot_a} ")
     sugg_a1_sorted = sorted(sugg_a1, key=score_term, reverse=True)
@@ -50,24 +58,25 @@ def generate_2word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
         if c == clean_seed or c == slot_a: continue
         if is_prohibited_term(c): continue
         if c.startswith(slot_a):
-            axis1_set.add(c)
+            target_kw = c
         else:
-            cand = f"{slot_a} {c}"
-            if cand != clean_seed and not is_prohibited_term(cand):
-                axis1_set.add(cand)
+            target_kw = f"{slot_a} {c}"
+
+        t_parts = target_kw.split()
+        if len(t_parts) >= 2 and is_semantically_incoherent(t_parts[0], ' '.join(t_parts[1:])):
+            continue
+        if is_contextually_incoherent(target_kw, context_info):
+            continue
+        axis1_set.add(target_kw)
         if len(axis1_set) >= 25:
             break
 
     if len(axis1_set) < 25:
-        # slot_a の属性に応じた安全な補充リストを取得
-        fish_terms = [
-            "刺身", "レシピ", "食べ方", "臭い", "寄生虫", "毒", "旬", "料理",
-            "下処理", "持ち帰り方", "人気", "おすすめ", "保存", "釣り方", "ルアー"
-        ]
-        is_fish_entity = slot_a in ["シーバス", "スズキ", "ブラックバス", "ボラ", "アジ", "サバ", "タイ", "ヒラメ"]
-        candidate_terms = fish_terms + HIGH_RETENTION_TERMS if is_fish_entity else HIGH_RETENTION_TERMS
+        # Bの文脈（調理・食味、コスト等）に整合したキラーサフィックスを最優先注入
+        harmonized_terms = get_harmonized_axis1_terms(context_info)
+        fallback_candidates = harmonized_terms + HIGH_RETENTION_TERMS
 
-        for t in candidate_terms:
+        for t in fallback_candidates:
             if is_semantically_incoherent(slot_a, t):
                 continue
             cand = f"{slot_a} {t}"
@@ -77,12 +86,12 @@ def generate_2word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
                 break
 
     # --- 軸②: 〇〇 [B] (後固定) ---
+    # Aのドメイン（魚類、家電、衣服等）に完全に整合した同族を最優先ロック
     axis2_set = set()
 
-    family_res = detect_scale_family(slot_a) or detect_semantic_family(slot_a)
-    if family_res:
-        _, family_members = family_res
-        for member in family_members:
+    harmonized_entities = get_harmonized_axis2_entities(context_info)
+    if harmonized_entities:
+        for member in harmonized_entities:
             cand = f"{member} {slot_b}"
             if cand != clean_seed and not is_prohibited_term(cand):
                 axis2_set.add(cand)
@@ -90,12 +99,23 @@ def generate_2word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
                 break
 
     if len(axis2_set) < 25:
+        scale_res = detect_scale_family(slot_a)
+        if scale_res:
+            _, scale_members = scale_res
+            for m in scale_members:
+                cand = f"{m} {slot_b}"
+                if cand != clean_seed and not is_prohibited_term(cand):
+                    axis2_set.add(cand)
+                if len(axis2_set) >= 25:
+                    break
+
+    if len(axis2_set) < 25:
         sugg_a2 = fetch_search_suggestions(f"{slot_b} ")
         for s in sugg_a2:
             c = s.strip()
             if not c or c == clean_seed or c == slot_b: continue
             if is_prohibited_term(c): continue
-            # 末尾が slot_b で終わっている自然な後置クエリのみ採用（逆順結合による文法破壊を完全防止）
+            # 末尾が slot_b で終わっている自然な後置クエリのみ採用
             if c.endswith(slot_b) and c != slot_b:
                 prefix_cand = c[:-len(slot_b)].strip()
                 if prefix_cand and not is_semantically_incoherent(prefix_cand, slot_b):
