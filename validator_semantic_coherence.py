@@ -16,23 +16,7 @@
 
 import re
 from typing import List
-
-# 価格・費用系サフィックス（属性: コスト・数値）
-PRICE_COST_SUFFIXES = [
-    "値段", "価格", "費用", "料金", "相場", "相場価格", "予算", "金額", "月額", "年額"
-]
-
-# ハウツー・動作・工程系プレフィックス（属性: アクション・方法）
-HOWTO_ACTION_PREFIXES = [
-    "やり方", "コツ", "手順", "方法", "失敗", "アレンジ", "注意点", "基本",
-    "プロ", "初心者", "簡単", "自作", "道具", "時間", "メリット", "デメリット", "理由"
-]
-
-# 価格・費用系と相性の良い自然な前置・展開語
-PRICE_NATURAL_PREFIXES = [
-    "相場", "安い", "高い", "おすすめ", "人気", "コスパ", "比較", "選び方",
-    "平均", "目安", "定価", "割引", "セール", "お得", "最安値", "格安"
-]
+from domain_attr_cost import match_domain_cost, is_incoherent_cost, get_fallback_cost_prefixes
 
 # 比較・ランキング系サフィックス
 COMPARISON_SUFFIXES = [
@@ -59,17 +43,12 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     s_tokens = clean_s.split()
     s_last = s_tokens[-1]
 
-    # 3. 価格・費用系サフィックスに対するハウツー動詞結合の排除
-    # 例: 「やり方 珈琲値段」「手順 値段」「コツ 費用」
-    is_price_suffix = any(s_last == p or s_last.endswith(p) for p in PRICE_COST_SUFFIXES)
-    if is_price_suffix:
-        # ハウツー系プレフィックスは意味破綻
-        for h in HOWTO_ACTION_PREFIXES:
-            if clean_p == h or clean_p.endswith(h) or clean_p.startswith(h):
-                return True
+    # 3. ① コスト・価格系属性モジュールによる排除判定
+    if match_domain_cost(clean_s):
+        if is_incoherent_cost(clean_p, clean_s):
+            return True
 
     # 4. 比較・違い系サフィックスに対する不要な動詞・助詞混入の排除
-    # 例: 「比較して 比較」「比較的 意味 比較」「比較対象 比較」
     is_comp_suffix = any(s_last == c or s_last.endswith(c) for c in COMPARISON_SUFFIXES)
     if is_comp_suffix:
         if any(w in clean_p for w in ["比較", "違い", "ランキング", "して", "する", "的", "級"]):
@@ -91,14 +70,9 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
     s_tokens = clean_s.split()
     s_last = s_tokens[-1] if s_tokens else clean_s
 
-    # 価格・費用系の場合
-    if any(s_last == p or s_last.endswith(p) for p in PRICE_COST_SUFFIXES):
-        return [
-            "おすすめ", "人気", "安い", "高い", "コスパ", "相場", "比較", "選び方",
-            "最新", "格安", "定価", "お得", "平均", "目安", "自前", "業務用", "高級",
-            "最安値", "割引", "セール", "予算", "適正", "中古", "新品", "買い時",
-            "維持費", "総額", "内訳", "節約"
-        ]
+    # ① コスト・価格系の場合
+    if match_domain_cost(clean_s):
+        return get_fallback_cost_prefixes()
 
     # 比較・違い系の場合
     if any(s_last == c or s_last.endswith(c) for c in COMPARISON_SUFFIXES):
