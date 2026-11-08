@@ -1,0 +1,1808 @@
+{
+  "アクリルキーホルダー 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "ayakakanematsu0802.com",
+          "da": 4
+        }
+      ],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "originalgoods.press",
+          "da": 27,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.me-q.jp",
+          "da": 37,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "workshop.picoton.com",
+          "da": 30,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "originalprint.jp",
+          "da": 39,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "ayakakanematsu0802.com",
+          "da": 4,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "hotmobily.jp",
+          "da": 23,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jpbulk.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "カニカン 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 3,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "x.com",
+          "da": 97,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "jpbulk.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "yoshida-shoji.co.jp",
+          "da": 21,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "netshop.cando-web.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.instagram.com",
+          "da": 94,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "kijitora.link",
+          "da": 24,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "カラビナ 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "macaro-ni.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "search.rakuten.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "watts-online.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "hinata.me",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "happycamper.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "rakuski-diary.hatenablog.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "note.com",
+          "da": null,
+          "type": "NOTE_EXCLUDED"
+        }
+      ]
+    }
+  },
+  "カードケース 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★☆☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★☆☆",
+      "total_stars": 1,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "my-best.com",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "macaro-ni.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.kilat.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "watts-online.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "dime.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "micos-journal.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "article.auone.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "search.rakuten.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "キーホルダーパーツ 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 3,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "macchan-umamisauce.jp",
+          "da": 24,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "netshop.cando-web.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.instagram.com",
+          "da": 94,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "watts-online.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "workshop.picoton.com",
+          "da": 30,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.lycorp.co.jp",
+          "da": 62,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ストラップ 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 3,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "mamasnote.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "bebicia.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "okaimonoclub.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "ec.cando-web.co.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "watts-online.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "www.instagram.com",
+          "da": 94,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "チャーム 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★☆☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★☆☆",
+      "total_stars": 1,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.instagram.com",
+          "da": 94,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "nonno.hpplus.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "netshop.cando-web.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "item.rakuten.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.roomie.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "roomclip.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "100mania.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.lycorp.co.jp",
+          "da": 62,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "トレカケース 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "100kinlab.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "mamagirl.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "monosizecatalog.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "ichioshi.allabout.co.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "sepa.avcom.ie",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "tikitengo.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "soredoko.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ナスカン 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 4,
+      "single_digit_count": 2,
+      "single_digit_domains": [
+        {
+          "domain": "navilog.jp",
+          "da": 6
+        },
+        {
+          "domain": "www.hana-lima-nab.com",
+          "da": 9
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "xs512328.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "netshop.cando-web.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "navilog.jp",
+          "da": 6,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.hana-lima-nab.com",
+          "da": 9,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "www.lycorp.co.jp",
+          "da": 62,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "privacy.lycorp.co.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 4,
+      "single_digit_count": 3,
+      "single_digit_domains": [
+        {
+          "domain": "100oshi.jp",
+          "da": 3
+        },
+        {
+          "domain": "toy-compass.com",
+          "da": 4
+        },
+        {
+          "domain": "hyakkin-lab.com",
+          "da": 4
+        }
+      ],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "shiritaiarekore.com",
+          "da": 15,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "100oshi.jp",
+          "da": 3,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "toy-compass.com",
+          "da": 4,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "hyakkin-lab.com",
+          "da": 4,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "shimazi.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.oze-misawa.jp",
+          "da": 29,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jpbulk.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン カバー": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 3,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "shimazi.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "xs512328.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "ameblo.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "netshop.cando-web.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン セリア": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "lee.hpplus.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "gts.wfglobal.org",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.tiktok.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "shimazi.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "xs512328.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン ダイソー": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jpbulk.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "shimazi.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "ameblo.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.lycorp.co.jp",
+          "da": 62,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "privacy.lycorp.co.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン ネックレス": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "netshop.cando-web.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "cancam.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jpbulk.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.lemon8-app.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "shiritaiarekore.com",
+          "da": 15,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン 付け方": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "watts-online.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.tiktok.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "mobilisr.jhatkaa.org",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "dojingoods.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "www.lemon8-app.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "yuyun-yururi.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン 代わり": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★☆☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★☆☆",
+      "total_stars": 1,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "100kin-master.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.instagram.com",
+          "da": 94,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "x.com",
+          "da": 97,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "shiraberuzo.hatenablog.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "yuyun-yururi.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "lee.hpplus.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "xs512328.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "shimazi.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン 売り場": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 3,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "ameblo.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "shimazi.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "xs512328.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "viluceblog.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン 外し方": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.tiktok.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.lemon8-app.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "dojingoods.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "watts-online.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "notes.tiktok.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン 外れる": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 3,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "grapee.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "dojingoods.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "watts-online.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン 外れ防止": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 3,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "lee.hpplus.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "grapee.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "xs512328.xsrv.jp",
+          "da": 89,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.tiktok.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "macchan-umamisauce.jp",
+          "da": 24,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン 留め具": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "lee.hpplus.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "mobilisr.jhatkaa.org",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.tiktok.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "dojingoods.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ボールチェーン100均 ボールチェーン 落下防止": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★★",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★★",
+      "total_stars": 3,
+      "single_digit_count": 1,
+      "single_digit_domains": [
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5
+        }
+      ],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "oshikatsu100.jp",
+          "da": 5,
+          "type": "SINGLE_DIGIT_DA"
+        },
+        {
+          "domain": "joshi-spa.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "grapee.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "beefshop.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "lee.hpplus.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "mobilisr.jhatkaa.org",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "ワイヤーリング 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★☆☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★☆☆",
+      "total_stars": 1,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 1,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "kurashi-no.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.youtube.com",
+          "da": 100,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "kaorumama.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "netshop.cando-web.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.instagram.com",
+          "da": 94,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "ameblo.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "note.com",
+          "da": null,
+          "type": "NOTE_EXCLUDED"
+        },
+        {
+          "domain": "www.lemon8-app.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "二重カン 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "search.rakuten.co.jp",
+          "da": 50,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "ec.cando-web.co.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "x.com",
+          "da": 97,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "iemonocatalog.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "dokodekaunos.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "wowma.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "www.lycorp.co.jp",
+          "da": 62,
+          "type": "NORMAL_DOMAIN"
+        }
+      ]
+    }
+  },
+  "安全ピン 100均": {
+    "volume": null,
+    "sd": null,
+    "star_rating": "★★☆",
+    "verified_at": "2026-10-22 18:31:14",
+    "da_meta": {
+      "star_rating": "★★☆",
+      "total_stars": 2,
+      "single_digit_count": 0,
+      "single_digit_domains": [],
+      "qa_count": 2,
+      "qa_domains": [
+        "chiebukuro.yahoo.co.jp",
+        "detail.chiebukuro.yahoo.co.jp"
+      ],
+      "details": [
+        {
+          "domain": "chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        },
+        {
+          "domain": "100kin-kurabe.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "jp.daisonet.com",
+          "da": 45,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "ichioshi.allabout.co.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "100kin-wander.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.lemon8-app.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "www.reddit.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "rooms19.com",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "watts-online-biz.jp",
+          "da": 0,
+          "type": "NORMAL_DOMAIN"
+        },
+        {
+          "domain": "detail.chiebukuro.yahoo.co.jp",
+          "da": null,
+          "type": "QA_SITE_STAR"
+        }
+      ]
+    }
+  }
+}

@@ -78,7 +78,8 @@ def is_contextually_incoherent(target_kw: str, context_info: Dict[str, Any]) -> 
     t = target_kw.strip()
 
     # 魚 × 調理・食味 の文脈でウイスキー（お酒）系へ脱線した場合
-    if "fish" in context or context_info.get("intent_b") == "cooking_eating":
+    # （※ ただし「シーバスリーガル」等のウイスキー自体がシードの場合は除外対象としない）
+    if "fish" in context and not any(w in context_info.get("slot_a", "") for w in ["リーガル", "ウイスキー"]):
         whisky_words = ["ウイスキー", "リーガル", "ミズナラ", "12年", "18年", "水割り", "ハイボール"]
         if any(w in t for w in whisky_words):
             return True

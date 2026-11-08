@@ -3,15 +3,16 @@
 ==============================================================================
 【モジュール設計メモ】
 ■ モジュール名: api_suggest_harvester.py
-■ カテゴリ: API / Googleサジェスト実測キーワード・ハーベスター
+■ カテゴリ: API / Googleサジェスト実測キーワード・ハーベスター（高速並列版）
 ■ 責務・役割（Single Responsibility）:
-  - AIやシステムによる作為的な単語合成（マナー、持ち物、やり方等の強制結合）を完全根絶する。
-  - Googleが実際に認知・蓄積している「本物の生検索キーワード」のみをサジェストAPIから徹底走査・収集する。
-  - 軸①（前固定）および軸②（後固定）に対し、実在する自然なクエリのみで各25件を満たす。
+  - AIやシステムによる作為的な単語合成（マナー、持ち物等の強制結合）を完全根絶。
+  - GoogleサジェストAPIをThreadPoolExecutorで高速並列走査（1〜2秒完結）し、
+    人間が実際に検索している生キーワードのみを各軸25件収集する。
 ==============================================================================
 """
 
-from typing import List, Set, Optional
+from typing import List, Set
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from api_suggest_client import fetch_search_suggestions
 from filter_prohibited_terms import is_prohibited_term
 from engine_semantic_family import detect_semantic_family, detect_scale_family
@@ -19,14 +20,12 @@ from engine_context_harmonizer import (
     analyze_seed_context, get_harmonized_axis2_entities, is_contextually_incoherent
 )
 
-# 50音＋アルファベットの走査インデックス
-SCAN_CHARS = [
+# 走査文字インデックス（代表文字＋アルファベット）
+FAST_CHARS = [
     "", "あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ",
     "さ", "し", "す", "せ", "そ", "た", "ち", "つ", "て", "と",
-    "な", "に", "ぬ", "ね", "の", "は", "ひ", "ふ", "へ", "ほ",
-    "ま", "み", "む", "め", "も", "や", "ゆ", "よ", "ら", "り",
-    "る", "れ", "ろ", "わ", "a", "b", "c", "d", "e", "f", "g",
-    "h", "i", "j", "k", "l", "m", "n", "o", "p", "r", "s", "t", "w"
+    "な", "に", "は", "ひ", "ま", "み", "や", "ゆ", "よ", "ら", "り", "わ",
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "m", "p", "r", "s", "t"
 ]
 
 def harvest_axis1_prefix_suggestions(
@@ -36,46 +35,60 @@ def harvest_axis1_prefix_suggestions(
     target_count: int = 25
 ) -> List[str]:
     """
-    軸①用: [prefix] 〇〇 (前固定) の本物のGoogleサジェストキーワードを走査・収集する。
-    人工的な単語合成は一切行わず、Googleが返した完全一致プレフィックスクエリのみを採用。
+    軸①用: [prefix] 〇〇 (前固定) の本物のGoogleサジェストキーワードを高速並列走査・収集する。
     """
     clean_p = prefix.strip()
     clean_seed = exclude_seed.strip()
-    collected: List[str] = []
-    seen: Set[str] = set()
-
     if not clean_p:
         return []
 
+    collected: List[str] = []
+    seen: Set[str] = set()
     context_info = analyze_seed_context(clean_p, suffix_context) if suffix_context else None
 
-    for ch in SCAN_CHARS:
-        query = f"{clean_p} {ch}".strip()
-        suggestions = fetch_search_suggestions(query)
-        for s in suggestions:
-            item = s.strip()
-            if not item or item == clean_p or item == clean_seed:
-                continue
-            if is_prohibited_term(item):
-                continue
-            # 必ず prefix で始まっていること
-            if not item.startswith(clean_p):
-                continue
-            remainder = item[len(clean_p):].strip()
-            if not remainder:
-                continue
+    # Step 1: まずプレフィックス単体のサジェストを取得
+    base_suggs = fetch_search_suggestions(f"{clean_p} ")
+    for s in base_suggs:
+        item = s.strip()
+        if not item or item == clean_p or item == clean_seed or is_prohibited_term(item):
+            continue
+        if item.startswith(clean_p):
+            rem = item[len(clean_p):].strip()
+            if rem:
+                norm = f"{clean_p} {rem}"
+                if not (context_info and is_contextually_incoherent(norm, context_info)):
+                    if norm not in seen:
+                        seen.add(norm)
+                        collected.append(norm)
 
-            normalized = f"{clean_p} {remainder}"
-            if context_info and is_contextually_incoherent(normalized, context_info):
-                continue
+    if len(collected) >= target_count:
+        return collected[:target_count]
 
-            if normalized not in seen:
-                seen.add(normalized)
-                collected.append(normalized)
-                if len(collected) >= target_count:
-                    return collected
+    # Step 2: 並列走査で不足分を高速取得
+    queries = [f"{clean_p} {ch}".strip() for ch in FAST_CHARS if ch]
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        future_map = {executor.submit(fetch_search_suggestions, q): q for q in queries}
+        for future in as_completed(future_map):
+            try:
+                suggs = future.result()
+                for s in suggs:
+                    item = s.strip()
+                    if not item or item == clean_p or item == clean_seed or is_prohibited_term(item):
+                        continue
+                    if item.startswith(clean_p):
+                        rem = item[len(clean_p):].strip()
+                        if rem:
+                            norm = f"{clean_p} {rem}"
+                            if not (context_info and is_contextually_incoherent(norm, context_info)):
+                                if norm not in seen:
+                                    seen.add(norm)
+                                    collected.append(norm)
+            except Exception:
+                pass
+            if len(collected) >= target_count:
+                break
 
-    return collected
+    return collected[:target_count]
 
 def harvest_axis2_suffix_suggestions(
     suffix: str,
@@ -84,98 +97,99 @@ def harvest_axis2_suffix_suggestions(
     target_count: int = 25
 ) -> List[str]:
     """
-    軸②用: 〇〇 [suffix] (後固定) の本物のGoogleサジェストキーワードを走査・収集する。
-    1. 同族エンティティ（魚、号数、色、調理品等）を優先し、Googleサジェストで実在照合
-    2. suffix を含む実在サジェストから前置エンティティを抽出（例: '手羽先 レシピ フライパン'）
-    3. 前置1文字走査で実在する後置一致クエリを収集
+    軸②用: 〇〇 [suffix] (後固定) の本物のGoogleサジェストキーワードを高速並列走査・収集する。
     """
     clean_s = suffix.strip()
     clean_seed = exclude_seed.strip()
     clean_entity = seed_entity.strip()
-    collected: List[str] = []
-    seen: Set[str] = set()
-
     if not clean_s:
         return []
 
+    collected: List[str] = []
+    seen: Set[str] = set()
     suffix_tokens = clean_s.split()
 
-    # Priority 1: シードエンティティの同族（魚種、色、家電、号数等）をGoogleで実在検証
+    # Priority 1: 同族エンティティ（ウイスキー、魚、号数、色等）を並列検証
+    candidates = []
     if clean_entity:
         context_info = analyze_seed_context(clean_entity, clean_s)
         candidates = get_harmonized_axis2_entities(context_info)
         if not candidates:
-            fam = detect_scale_family(clean_entity) or detect_semantic_family(clean_entity)
+            fam = detect_semantic_family(clean_entity) or detect_scale_family(clean_entity)
             if fam:
                 _, candidates = fam
 
-        if candidates:
-            for member in candidates:
-                cand = f"{member} {clean_s}"
-                if cand in seen or cand == clean_seed or is_prohibited_term(cand):
-                    continue
-                # Googleサジェストで実際に検索されているか実在確認
-                suggs = fetch_search_suggestions(cand)
-                if suggs:
-                    seen.add(cand)
-                    collected.append(cand)
-                    if len(collected) >= target_count:
-                        return collected
+    if candidates:
+        cand_queries = [f"{m} {clean_s}" for m in candidates if f"{m} {clean_s}" != clean_seed]
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            future_map = {executor.submit(fetch_search_suggestions, cq): cq for cq in cand_queries}
+            for future in as_completed(future_map):
+                cq = future_map[future]
+                try:
+                    suggs = future.result()
+                    if suggs: # Googleで実在する検索と認定
+                        if cq not in seen and not is_prohibited_term(cq):
+                            seen.add(cq)
+                            collected.append(cq)
+                except Exception:
+                    pass
+                if len(collected) >= target_count:
+                    return collected[:target_count]
 
-    # Priority 2: Suffix走査で Google が返す実在クエリ群から抽出（料理名、アイテム名等）
-    for ch in SCAN_CHARS:
-        query = f"{clean_s} {ch}".strip()
-        suggestions = fetch_search_suggestions(query)
-        for s in suggestions:
-            item = s.strip()
-            if not item or item == clean_s or item == clean_seed:
-                continue
-            if is_prohibited_term(item):
-                continue
-
-            tokens = item.split()
-            if len(suffix_tokens) == 1:
-                # 1語サフィックス（例: 食べる）
-                if len(tokens) >= 2 and tokens[-1] == suffix_tokens[0]:
-                    normalized = " ".join(tokens)
-                    if normalized not in seen and normalized != clean_seed:
-                        seen.add(normalized)
-                        collected.append(normalized)
-                        if len(collected) >= target_count:
-                            return collected
-            else:
-                # 2語以上サフィックス（例: レシピ フライパン）
-                match_idx = -1
-                for i in range(len(tokens) - len(suffix_tokens) + 1):
-                    if tokens[i:i + len(suffix_tokens)] == suffix_tokens:
-                        match_idx = i
-                        break
-                if match_idx > 0:
-                    prefix_part = " ".join(tokens[:match_idx])
-                    normalized = f"{prefix_part} {clean_s}"
-                    if normalized not in seen and not is_prohibited_term(normalized) and normalized != clean_seed:
-                        seen.add(normalized)
-                        collected.append(normalized)
-                        if len(collected) >= target_count:
-                            return collected
-
-    # Priority 3: 前置文字走査で実在する後置一致クエリを収集
+    # Priority 2: Suffixの並列走査で実在する前置クエリを収集
     if len(collected) < target_count:
-        for ch in SCAN_CHARS[1:]:
-            q = f"{ch} {clean_s}"
-            suggestions = fetch_search_suggestions(q)
-            for s in suggestions:
-                item = s.strip()
-                if not item or item == clean_s or item == clean_seed:
-                    continue
-                if is_prohibited_term(item):
-                    continue
-                tokens = item.split()
-                if len(tokens) >= 2 and item.endswith(clean_s):
-                    if item not in seen and item != clean_seed:
-                        seen.add(item)
-                        collected.append(item)
-                        if len(collected) >= target_count:
-                            return collected
+        queries = [f"{clean_s} {ch}".strip() for ch in FAST_CHARS]
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            future_map = {executor.submit(fetch_search_suggestions, q): q for q in queries}
+            for future in as_completed(future_map):
+                try:
+                    suggs = future.result()
+                    for s in suggs:
+                        item = s.strip()
+                        if not item or item == clean_s or item == clean_seed or is_prohibited_term(item):
+                            continue
+                        tokens = item.split()
+                        if len(suffix_tokens) == 1:
+                            if len(tokens) >= 2 and tokens[-1] == suffix_tokens[0]:
+                                norm = " ".join(tokens)
+                                if norm not in seen and norm != clean_seed:
+                                    seen.add(norm)
+                                    collected.append(norm)
+                        else:
+                            # 2語以上サフィックス（例: レシピ フライパン）
+                            for i in range(len(tokens) - len(suffix_tokens) + 1):
+                                if tokens[i:i + len(suffix_tokens)] == suffix_tokens and i > 0:
+                                    p_part = " ".join(tokens[:i])
+                                    norm = f"{p_part} {clean_s}"
+                                    if norm not in seen and not is_prohibited_term(norm) and norm != clean_seed:
+                                        seen.add(norm)
+                                        collected.append(norm)
+                                    break
+                except Exception:
+                    pass
+                if len(collected) >= target_count:
+                    break
 
-    return collected
+    # Priority 3: 前置文字並列走査
+    if len(collected) < target_count:
+        queries = [f"{ch} {clean_s}" for ch in FAST_CHARS if ch]
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            future_map = {executor.submit(fetch_search_suggestions, q): q for q in queries}
+            for future in as_completed(future_map):
+                try:
+                    suggs = future.result()
+                    for s in suggs:
+                        item = s.strip()
+                        if not item or item == clean_s or item == clean_seed or is_prohibited_term(item):
+                            continue
+                        tokens = item.split()
+                        if len(tokens) >= 2 and item.endswith(clean_s):
+                            if item not in seen and item != clean_seed:
+                                seen.add(item)
+                                collected.append(item)
+                except Exception:
+                    pass
+                if len(collected) >= target_count:
+                    break
+
+    return collected[:target_count]

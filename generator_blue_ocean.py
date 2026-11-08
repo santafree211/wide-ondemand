@@ -19,6 +19,8 @@ from filter_prohibited_terms import is_prohibited_term
 
 def detect_seed_theme(seed: str) -> str:
     s = seed.lower()
+    if any(w in s for w in ["ウイスキー", "シーバスリーガル", "山崎", "白州", "響", "マッカラン", "ハイボール", "酒", "ワイン"]):
+        return "whisky"
     if any(w in s for w in ["魚", "シーバス", "ブラックバス", "釣り", "ルアー", "スズキ", "アジ", "サバ"]):
         return "fishing_eating"
     if any(w in s for w in ["色", "絵の具", "水彩", "アクリル", "混色", "カラー", "イラスト"]):
@@ -152,6 +154,30 @@ def generate_blue_ocean_keywords(seed: str, slot_a: str = "", slot_b: str = "") 
             f"{p_entity} 大量消費 冷凍 保存食",
             f"{p_entity} 津本式 血抜き コツ",
             f"{p_entity} 美味しい 食べ方 コツ"
+        ]
+
+    elif theme == "whisky":
+        # 【堅牢な2語】洋酒種類・飲み方・ボトル価値（15件）
+        two_word_cands = [
+            f"シングルモルト {s_action}", f"ブレンデッド {s_action}", f"スコッチ {s_action}",
+            f"ジャパニーズ {s_action}", f"バーボン {s_action}",
+            f"{p_entity} ハイボール", f"{p_entity} ロック", f"{p_entity} 水割り",
+            f"{p_entity} ストレート", f"{p_entity} トワイスアップ",
+            f"{p_entity} 定価", f"{p_entity} プレ値", f"{p_entity} 終売",
+            f"{p_entity} 旧ボトル", f"{p_entity} 特級"
+        ]
+        # 【キラー意図3語】（10件）
+        three_word_cands = [
+            f"{clean_seed} 飲み方",
+            f"{clean_seed} 定価",
+            f"{clean_seed} 評価",
+            f"{clean_seed} 味",
+            f"{clean_seed} ハイボール 比率",
+            f"{clean_seed} ミズナラ 違い",
+            f"{p_entity} 12年 18年 比較",
+            f"{clean_seed} まずい 理由",
+            f"{clean_seed} 美味しい 飲み方",
+            f"{clean_seed} おすすめ グラス"
         ]
 
     else: # general

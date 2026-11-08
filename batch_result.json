@@ -1,0 +1,92 @@
+﻿[
+    {
+        "keyword":  "自己肯定感 低い",
+        "volume":  14800,
+        "sd":  40,
+        "star_rating":  "☆☆",
+        "source":  "CACHE",
+        "status":  "OK",
+        "verified_at":  "2026-09-08 13:40:58"
+    },
+    {
+        "keyword":  "レモン水 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:09"
+    },
+    {
+        "keyword":  "リンゴ酢 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:10"
+    },
+    {
+        "keyword":  "黒酢 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:10"
+    },
+    {
+        "keyword":  "トマトジュース 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:10"
+    },
+    {
+        "keyword":  "豆乳 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:10"
+    },
+    {
+        "keyword":  "青汁 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:10"
+    },
+    {
+        "keyword":  "白湯 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:10"
+    },
+    {
+        "keyword":  "ルイボスティー 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:10"
+    },
+    {
+        "keyword":  "プロテイン 体に悪い",
+        "volume":  null,
+        "sd":  null,
+        "star_rating":  "UNCHECKED",
+        "source":  "API_FAILED",
+        "status":  "UNAVAILABLE",
+        "verified_at":  "2026-09-08 14:07:10"
+    }
+]

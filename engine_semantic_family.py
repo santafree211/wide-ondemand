@@ -26,7 +26,7 @@ from dict_semantic_catalog import (
     COLORS_FULL, FOOTWEAR_LIST, SWEETS_LIST, STAPLES_LIST,
     COOKING_APPLIANCES, APP_GENRES, DISHES_LIST, SEASONINGS_LIST,
     HARDWARE_PARTS, APPLIANCES_LIST, HEALTH_DRINKS, MENTAL_TRAITS,
-    CAR_WASH_STYLES, FISH_SPECIES_LIST
+    CAR_WASH_STYLES, FISH_SPECIES_LIST, WHISKY_LIST
 )
 
 # 分離した数値スケール判定モジュール
@@ -69,18 +69,24 @@ def detect_semantic_family(term: str) -> Optional[Tuple[str, List[str]]]:
         ("health_drink", HEALTH_DRINKS),
         ("mental_trait", MENTAL_TRAITS),
         ("car_wash", CAR_WASH_STYLES),
-        ("fish", FISH_SPECIES_LIST)
+        ("fish", FISH_SPECIES_LIST),
+        ("whisky", WHISKY_LIST)
     ]
 
+    # 3. 各種意味カテゴリの照合
+    # Pass 1: 完全一致を最優先（例: 「シーバスリーガル」を「シーバス（魚）」と誤認するのを防止）
     for cat_name, cat_list in catalogs:
-        matched = False
         for item in cat_list:
-            if clean == item or (len(item) >= 2 and (item in clean or clean in item)):
-                matched = True
-                break
-        if matched:
-            res = [x for x in cat_list if x != clean]
-            return cat_name, res
+            if clean == item:
+                res = [x for x in cat_list if x != clean]
+                return cat_name, res
+
+    # Pass 2: 部分一致判定（長い単語・複合語用）
+    for cat_name, cat_list in catalogs:
+        for item in cat_list:
+            if len(item) >= 2 and (item in clean or clean in item):
+                res = [x for x in cat_list if x != clean]
+                return cat_name, res
 
     return None
 
