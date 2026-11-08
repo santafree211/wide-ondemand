@@ -20,6 +20,12 @@ PRICE_COST_SUFFIXES = [
     "値段", "価格", "費用", "料金", "相場", "予算", "金額", "月額", "年額", "維持費"
 ]
 
+# 状態・感情・不具合系形容詞サフィックス（属性: 違和感・トラブル・不調）
+ADJECTIVE_STATE_SUFFIXES = [
+    "おかしい", "可笑しい", "変", "痛い", "重い", "遅い", "怪しい", "ダサい",
+    "怖い", "つらい", "だるい", "臭い", "危ない", "めんどくさい", "動かない"
+]
+
 # ハウツー・動作系サフィックス（属性: 工程・作業）
 HOWTO_ACTION_SUFFIXES = [
     "作り方", "使い方", "始め方", "やり方", "手順", "直し方", "修理", "設定", "接続"
@@ -62,26 +68,39 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     if not clean_p or not clean_s:
         return False
 
-    # 1. 完全同一語・重複結合の排除（例: 「値段 値段」「比較 比較」「珈琲 珈琲」）
+    # 1. 完全同一語・重複結合の排除（例: 「値段 値段」「比較 比較」「珈琲 珈琲」「可笑しい おかしい」）
     if clean_p == clean_s or clean_p in clean_s or clean_s in clean_p:
+        return True
+    if any(stem in clean_p and stem in clean_s for stem in ["おかしい", "可笑しい", "おかし"]):
         return True
 
     s_tokens = clean_s.split()
     s_last = s_tokens[-1] if s_tokens else clean_s
 
-    # 2. 価格・費用系サフィックスに対するハウツー動詞結合の排除
+    # 2. 状態・形容詞・不具合サフィックスに対するトピック汎用語の結合排除
+    # 例: 「おすすめ おかしい」「やり方 おかしい」「初心者 おかしい」「手順 おかしい」
+    if any(s_last == a or s_last.endswith(a) for a in ADJECTIVE_STATE_SUFFIXES):
+        incoherent_for_adj = [
+            "おすすめ", "人気", "ランキング", "初心者", "始め方", "基本",
+            "やり方", "コツ", "手順", "選び方", "道具", "準備", "持ち物",
+            "比較", "マナー", "ルール", "失敗しない", "メリット", "デメリット"
+        ]
+        if any(clean_p == inc or clean_p.startswith(inc) for inc in incoherent_for_adj):
+            return True
+
+    # 3. 価格・費用系サフィックスに対するハウツー動詞結合の排除
     # 例: 「やり方 値段」「手順 費用」「コツ 相場」
     if any(s_last == p or s_last.endswith(p) for p in PRICE_COST_SUFFIXES):
         if any(clean_p == h or clean_p.startswith(h) for h in HOWTO_PREFIXES):
             return True
 
-    # 3. ハウツー・動作系サフィックスに対する価格語結合の排除
+    # 4. ハウツー・動作系サフィックスに対する価格語結合の排除
     # 例: 「安い 作り方」「最安値 使い方」
     if any(s_last == h or s_last.endswith(h) for h in HOWTO_ACTION_SUFFIXES):
         if any(clean_p == pr or clean_p.startswith(pr) for pr in PRICE_PREFIXES):
             return True
 
-    # 4. 冠婚葬祭系に対する格安語の不謹慎排除
+    # 5. 冠婚葬祭系に対する格安語の不謹慎排除
     # 例: 「最安値 香典」「格安 祝儀」
     if any(s_last == c or s_last.endswith(c) for c in CEREMONY_SUFFIXES):
         if any(clean_p == pr for pr in PRICE_PREFIXES):
@@ -113,6 +132,16 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
             "最新", "格安", "定価", "お得", "平均", "目安", "自前", "業務用", "高級",
             "最安値", "割引", "セール", "予算", "適正", "中古", "新品", "買い時",
             "節約", "還元", "キャンペーン", "底値", "実質"
+        ]
+
+    # 状態・感情・不具合系形容詞サフィックスに特化したクラスター候補
+    # （何がおかしいのかという主語・対象 ＋ 原因・理由・対処法）
+    if any(s_last == a or s_last.endswith(a) for a in ADJECTIVE_STATE_SUFFIXES):
+        return [
+            "パソコン", "スマホ", "iPhone", "画面", "Wi-Fi", "音", "車", "エンジン",
+            "体調", "頭", "お腹", "喉", "会社", "上司", "職場", "旦那", "夫", "妻",
+            "彼氏", "彼女", "態度", "行動", "話", "自分", "原因", "理由", "対処法",
+            "直し方", "サイン", "初期症状", "相談", "違和感"
         ]
 
     # それ以外の全ジャンル（釣り、ボーリング、珈琲、ファッション、IT、暮らし等）

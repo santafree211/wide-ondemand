@@ -85,15 +85,11 @@ def generate_2word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
             c = s.strip()
             if not c or c == clean_seed or c == slot_b: continue
             if is_prohibited_term(c): continue
-            parts = c.split()
-            other_parts = [p for p in parts if p != slot_b]
-            if other_parts:
-                prefix_cand = ' '.join(other_parts)
-                if is_semantically_incoherent(prefix_cand, slot_b):
-                    continue
-                cand = f"{prefix_cand} {slot_b}"
-                if cand != clean_seed and not is_prohibited_term(cand):
-                    axis2_set.add(cand)
+            # 末尾が slot_b で終わっている自然な後置クエリのみ採用（逆順結合による文法破壊を完全防止）
+            if c.endswith(slot_b) and c != slot_b:
+                prefix_cand = c[:-len(slot_b)].strip()
+                if prefix_cand and not is_semantically_incoherent(prefix_cand, slot_b):
+                    axis2_set.add(c)
             if len(axis2_set) >= 25:
                 break
 

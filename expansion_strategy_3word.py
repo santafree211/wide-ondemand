@@ -78,15 +78,11 @@ def generate_3word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
             c = s.strip()
             if not c or c == clean_seed or c == suffix_pair: continue
             if is_prohibited_term(c): continue
-            parts = c.split()
-            other_parts = [p for p in parts if p not in [slot_b, slot_c]]
-            if other_parts:
-                cand_p = ' '.join(other_parts)
-                if is_semantically_incoherent(cand_p, suffix_pair):
-                    continue
-                cand = f"{cand_p} {suffix_pair}"
-                if cand != clean_seed and not is_prohibited_term(cand):
-                    axis2_set.add(cand)
+            # 末尾が suffix_pair で終わっている自然な後置クエリのみ採用（逆順結合による文法破壊を完全防止）
+            if c.endswith(suffix_pair) and c != suffix_pair:
+                cand_p = c[:-len(suffix_pair)].strip()
+                if cand_p and not is_semantically_incoherent(cand_p, suffix_pair):
+                    axis2_set.add(c)
             if len(axis2_set) >= 25:
                 break
 
