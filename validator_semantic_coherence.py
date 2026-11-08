@@ -3,40 +3,57 @@
 =============================================================================
 【モジュール設計メモ】
 ■ モジュール名: validator_semantic_coherence.py
-■ カテゴリ: Validation / 意味整合性・自然言語構文バリデーター
+■ カテゴリ: Validation / トピッククラスター型 意味整合性バリデーター
 ■ 責務・役割（Single Responsibility）:
-  - 「〇〇 [B]」等のキーワード結合時に、文脈上・文法上破綻した不自然な組み合わせ（検索意図ゼロ）を排除判定する。
-  - 例1: 価格・相場系サフィックス（「値段」「費用」「相場」「料金」等）に対する
-         「やり方」「手順」「コツ」「失敗」等のハウツー修飾の衝突を排除。
-  - 例2: 感情・評価系サフィックス（「デメリット」「メリット」「理由」等）に対する
-         無意味な名詞修飾・二重否定の衝突を排除。
-  - 例3: サジェストから得られた単語のうち、文頭と文末で同じ単語が重複する構文破壊（例: 「値段はいくら 値段」）を排除。
+  - トピッククラスターの4大意図（入門・実践・比較・深掘り）とシードキーワードの結合時に、
+    日本語として破綻する組み合わせ（価格×ハウツー衝突、語幹重複、文法ゴミ等）を判定・排除する。
+  - 16個の業種別ファイルに依存せず、普遍的な言語規則とトピッククラスターエンジンにより
+    あらゆるジャンルのキーワード展開を安全かつ高精度に制御する。
 =============================================================================
 """
 
-import re
 from typing import List
-from domain_attr_cost import match_domain_cost, is_incoherent_cost, get_fallback_cost_prefixes
-from domain_attr_fashion import match_domain_fashion, is_incoherent_fashion, get_fallback_fashion_prefixes
-from domain_attr_howto import match_domain_howto, is_incoherent_howto, get_fallback_howto_prefixes
-from domain_attr_comparison import match_domain_comparison, is_incoherent_comparison, get_fallback_comparison_prefixes
-from domain_attr_trouble import match_domain_trouble, is_incoherent_trouble, get_fallback_trouble_prefixes
-from domain_attr_gourmet import match_domain_gourmet, is_incoherent_gourmet, get_fallback_gourmet_prefixes
-from domain_attr_health import match_domain_health, is_incoherent_health, get_fallback_health_prefixes
-from domain_attr_gadget import match_domain_gadget, is_incoherent_gadget, get_fallback_gadget_prefixes
-from domain_attr_procedure import match_domain_procedure, is_incoherent_procedure, get_fallback_procedure_prefixes
-from domain_attr_relationship import match_domain_relationship, is_incoherent_relationship, get_fallback_relationship_prefixes
-from domain_attr_career import match_domain_career, is_incoherent_career, get_fallback_career_prefixes
-from domain_attr_ceremony import match_domain_ceremony, is_incoherent_ceremony, get_fallback_ceremony_prefixes
-from domain_attr_living import match_domain_living, is_incoherent_living, get_fallback_living_prefixes
-from domain_attr_money import match_domain_money, is_incoherent_money, get_fallback_money_prefixes
-from domain_attr_parenting import match_domain_parenting, is_incoherent_parenting, get_fallback_parenting_prefixes
-from domain_attr_mobility import match_domain_mobility, is_incoherent_mobility, get_fallback_mobility_prefixes
+from cluster_topic_builder import build_topic_cluster_prefixes
+
+# 価格・費用系サフィックス（属性: 金銭・数値）
+PRICE_COST_SUFFIXES = [
+    "値段", "価格", "費用", "料金", "相場", "予算", "金額", "月額", "年額", "維持費"
+]
+
+# ハウツー・動作系サフィックス（属性: 工程・作業）
+HOWTO_ACTION_SUFFIXES = [
+    "作り方", "使い方", "始め方", "やり方", "手順", "直し方", "修理", "設定", "接続"
+]
+
+# 礼儀・冠婚葬祭系サフィックス（属性: マナー・儀礼）
+CEREMONY_SUFFIXES = [
+    "香典", "祝儀", "ご祝儀", "結婚式", "葬式", "お通夜", "告別式", "マナー"
+]
+
+# ハウツー・工程系プレフィックス
+HOWTO_PREFIXES = [
+    "やり方", "コツ", "手順", "方法", "直し方", "修理", "作り方", "使い方"
+]
+
+# 価格・安売り系プレフィックス
+PRICE_PREFIXES = [
+    "安い", "高い", "定価", "最安値", "格安", "割引", "セール", "お得"
+]
+
+# 比較重複用トークン
+COMPARISON_DUPLICATE_TOKENS = [
+    "比較", "違い", "ランキング", "して", "する", "的", "級"
+]
+
+# 文法・品詞的なゴミ単語
+GRAMMATICAL_JUNK = [
+    "英語", "意味", "とは", "画像", "wiki", "一覧", "類語"
+]
 
 def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     """
     prefix と suffix を結合したキーワード（f"{prefix} {suffix}"）が
-    日本語の意味として破綻している（検索需要が実質ゼロ）かどうかを判定する。
+    日本語の意味として破綻している（検索意図ゼロ）かどうかを判定する。
     破綻している場合は True、自然な場合は False を返す。
     """
     clean_p = prefix.strip()
@@ -49,174 +66,61 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     if clean_p == clean_s or clean_p in clean_s or clean_s in clean_p:
         return True
 
-    # 2. 接尾辞の末尾語（メインの名詞属性）を取得
     s_tokens = clean_s.split()
-    s_last = s_tokens[-1]
+    s_last = s_tokens[-1] if s_tokens else clean_s
 
-    # 3. ① コスト・価格系属性モジュールによる排除判定
-    if match_domain_cost(clean_s):
-        if is_incoherent_cost(clean_p, clean_s):
+    # 2. 価格・費用系サフィックスに対するハウツー動詞結合の排除
+    # 例: 「やり方 値段」「手順 費用」「コツ 相場」
+    if any(s_last == p or s_last.endswith(p) for p in PRICE_COST_SUFFIXES):
+        if any(clean_p == h or clean_p.startswith(h) for h in HOWTO_PREFIXES):
             return True
 
-    # 4. ② ファッション・美容系属性モジュールによる排除判定
-    if match_domain_fashion(clean_s):
-        if is_incoherent_fashion(clean_p, clean_s):
+    # 3. ハウツー・動作系サフィックスに対する価格語結合の排除
+    # 例: 「安い 作り方」「最安値 使い方」
+    if any(s_last == h or s_last.endswith(h) for h in HOWTO_ACTION_SUFFIXES):
+        if any(clean_p == pr or clean_p.startswith(pr) for pr in PRICE_PREFIXES):
             return True
 
-    # 5. ③ ハウツー・操作系属性モジュールによる排除判定
-    if match_domain_howto(clean_s):
-        if is_incoherent_howto(clean_p, clean_s):
+    # 4. 冠婚葬祭系に対する格安語の不謹慎排除
+    # 例: 「最安値 香典」「格安 祝儀」
+    if any(s_last == c or s_last.endswith(c) for c in CEREMONY_SUFFIXES):
+        if any(clean_p == pr for pr in PRICE_PREFIXES):
             return True
 
-    # 6. ④ 比較・評価・選定系属性モジュールによる排除判定
-    if match_domain_comparison(clean_s):
-        if is_incoherent_comparison(clean_p, clean_s):
-            return True
+    # 5. 比較語幹の重複排除（例: 「比較して 比較」「比較的 違い」）
+    if any(w in clean_p for w in COMPARISON_DUPLICATE_TOKENS) and any(w in clean_s for w in ["比較", "違い"]):
+        return True
 
-    # 7. ⑤ トラブル・悩み・不具合系属性モジュールによる排除判定
-    if match_domain_trouble(clean_s):
-        if is_incoherent_trouble(clean_p, clean_s):
-            return True
-
-    # 8. ⑥ 飲食・グルメ系属性モジュールによる排除判定
-    if match_domain_gourmet(clean_s):
-        if is_incoherent_gourmet(clean_p, clean_s):
-            return True
-
-    # 9. ⑦ 健康・体質・医療系属性モジュールによる排除判定
-    if match_domain_health(clean_s):
-        if is_incoherent_health(clean_p, clean_s):
-            return True
-
-    # 10. ⑧ IT・ガジェット・機器系属性モジュールによる排除判定
-    if match_domain_gadget(clean_s):
-        if is_incoherent_gadget(clean_p, clean_s):
-            return True
-
-    # 11. ⑨ 制度・手続き・学習系属性モジュールによる排除判定
-    if match_domain_procedure(clean_s):
-        if is_incoherent_procedure(clean_p, clean_s):
-            return True
-
-    # 12. ⑩ 恋愛・人間関係・対人心理系属性モジュールによる排除判定
-    if match_domain_relationship(clean_s):
-        if is_incoherent_relationship(clean_p, clean_s):
-            return True
-
-    # 13. ⑪ 仕事・キャリア・転職・退職系属性モジュールによる排除判定
-    if match_domain_career(clean_s):
-        if is_incoherent_career(clean_p, clean_s):
-            return True
-
-    # 14. ⑫ 冠婚葬祭・マナー・贈答系属性モジュールによる排除判定
-    if match_domain_ceremony(clean_s):
-        if is_incoherent_ceremony(clean_p, clean_s):
-            return True
-
-    # 15. ⑬ 住まい・暮らし・家事・ペット系属性モジュールによる排除判定
-    if match_domain_living(clean_s):
-        if is_incoherent_living(clean_p, clean_s):
-            return True
-
-    # 16. ⑭ 金融・資産運用・保険・クレカ系属性モジュールによる排除判定
-    if match_domain_money(clean_s):
-        if is_incoherent_money(clean_p, clean_s):
-            return True
-
-    # 17. ⑮ 子育て・育児・知育系属性モジュールによる排除判定
-    if match_domain_parenting(clean_s):
-        if is_incoherent_parenting(clean_p, clean_s):
-            return True
-
-    # 18. ⑯ 自動車・バイク・カーライフ系属性モジュールによる排除判定
-    if match_domain_mobility(clean_s):
-        if is_incoherent_mobility(clean_p, clean_s):
-            return True
-
-    # 14. 文法・品詞的なゴミ（英語の文法用語、活用形崩れ等）の排除
-    grammatical_junk = ["英語", "意味", "とは", "画像", "wiki", "一覧", "類語"]
-    if clean_p in grammatical_junk:
+    # 6. 文法・品詞的なゴミの排除
+    if clean_p in GRAMMATICAL_JUNK:
         return True
 
     return False
 
 def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
     """
-    suffix（後固定部）の持つ意味属性に合わせて、
-    意味破綻しない自然なバックアップ展開候補リストを動的に選定して返す。
+    トピッククラスターの4大スロット（入門・実践・比較・深掘り）に基づき、
+    suffixと意味整合するキラープレフィックス候補リストを生成して返す。
     """
     clean_s = suffix.strip()
     s_tokens = clean_s.split()
     s_last = s_tokens[-1] if s_tokens else clean_s
 
-    # ① コスト・価格系の場合
-    if match_domain_cost(clean_s):
-        return get_fallback_cost_prefixes()
+    # 価格・費用サフィックスに特化したクラスター候補
+    if any(s_last == p or s_last.endswith(p) for p in PRICE_COST_SUFFIXES):
+        return [
+            "おすすめ", "人気", "安い", "高い", "コスパ", "相場", "比較", "選び方",
+            "最新", "格安", "定価", "お得", "平均", "目安", "自前", "業務用", "高級",
+            "最安値", "割引", "セール", "予算", "適正", "中古", "新品", "買い時",
+            "節約", "還元", "キャンペーン", "底値", "実質"
+        ]
 
-    # ② ファッション・美容系の場合
-    if match_domain_fashion(clean_s):
-        return get_fallback_fashion_prefixes()
+    # それ以外の全ジャンル（釣り、ボーリング、珈琲、ファッション、IT、暮らし等）
+    # ➡ トピッククラスター4大スロット（入門・実践・比較・深掘り）から自動供給
+    raw_cluster_list = build_topic_cluster_prefixes()
+    valid_list = []
+    for p in raw_cluster_list:
+        if not is_semantically_incoherent(p, clean_s):
+            valid_list.append(p)
 
-    # ③ ハウツー・操作系の場合
-    if match_domain_howto(clean_s):
-        return get_fallback_howto_prefixes()
-
-    # ④ 比較・評価・選定系の場合
-    if match_domain_comparison(clean_s):
-        return get_fallback_comparison_prefixes()
-
-    # ⑤ トラブル・悩み・不具合系の場合
-    if match_domain_trouble(clean_s):
-        return get_fallback_trouble_prefixes()
-
-    # ⑥ 飲食・グルメ系の場合
-    if match_domain_gourmet(clean_s):
-        return get_fallback_gourmet_prefixes()
-
-    # ⑦ 健康・体質・医療系の場合
-    if match_domain_health(clean_s):
-        return get_fallback_health_prefixes()
-
-    # ⑧ IT・ガジェット・機器系の場合
-    if match_domain_gadget(clean_s):
-        return get_fallback_gadget_prefixes()
-
-    # ⑨ 制度・手続き・学習系の場合
-    if match_domain_procedure(clean_s):
-        return get_fallback_procedure_prefixes()
-
-    # ⑩ 恋愛・人間関係・対人心理系の場合
-    if match_domain_relationship(clean_s):
-        return get_fallback_relationship_prefixes()
-
-    # ⑪ 仕事・キャリア・転職・退職系の場合
-    if match_domain_career(clean_s):
-        return get_fallback_career_prefixes()
-
-    # ⑫ 冠婚葬祭・マナー・贈答系の場合
-    if match_domain_ceremony(clean_s):
-        return get_fallback_ceremony_prefixes()
-
-    # ⑬ 住まい・暮らし・家事・ペット系の場合
-    if match_domain_living(clean_s):
-        return get_fallback_living_prefixes()
-
-    # ⑭ 金融・資産運用・保険・クレカ系の場合
-    if match_domain_money(clean_s):
-        return get_fallback_money_prefixes()
-
-    # ⑮ 子育て・育児・知育系の場合
-    if match_domain_parenting(clean_s):
-        return get_fallback_parenting_prefixes()
-
-    # ⑯ 自動車・バイク・カーライフ系の場合
-    if match_domain_mobility(clean_s):
-        return get_fallback_mobility_prefixes()
-
-    # デフォルト（道具・製品・一般対象）
-    return [
-        "おすすめ", "人気", "やり方", "コツ", "選び方", "種類", "基本",
-        "簡単", "初心者", "プロ", "注意点", "失敗", "道具", "費用", "時間",
-        "最新", "定番", "便利", "仕組み", "メリット", "デメリット",
-        "アレンジ", "長持ち", "お手入れ", "自作", "安全"
-    ]
+    return valid_list
