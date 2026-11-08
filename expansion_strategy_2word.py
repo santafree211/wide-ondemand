@@ -59,7 +59,17 @@ def generate_2word_axes(tokens: List[str], clean_seed: str) -> Dict[str, Any]:
             break
 
     if len(axis1_set) < 25:
-        for t in HIGH_RETENTION_TERMS:
+        # slot_a の属性に応じた安全な補充リストを取得
+        fish_terms = [
+            "刺身", "レシピ", "食べ方", "臭い", "寄生虫", "毒", "旬", "料理",
+            "下処理", "持ち帰り方", "人気", "おすすめ", "保存", "釣り方", "ルアー"
+        ]
+        is_fish_entity = slot_a in ["シーバス", "スズキ", "ブラックバス", "ボラ", "アジ", "サバ", "タイ", "ヒラメ"]
+        candidate_terms = fish_terms + HIGH_RETENTION_TERMS if is_fish_entity else HIGH_RETENTION_TERMS
+
+        for t in candidate_terms:
+            if is_semantically_incoherent(slot_a, t):
+                continue
             cand = f"{slot_a} {t}"
             if cand != clean_seed and not is_prohibited_term(cand):
                 axis1_set.add(cand)

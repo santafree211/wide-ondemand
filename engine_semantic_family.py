@@ -26,7 +26,7 @@ from dict_semantic_catalog import (
     COLORS_FULL, FOOTWEAR_LIST, SWEETS_LIST, STAPLES_LIST,
     COOKING_APPLIANCES, APP_GENRES, DISHES_LIST, SEASONINGS_LIST,
     HARDWARE_PARTS, APPLIANCES_LIST, HEALTH_DRINKS, MENTAL_TRAITS,
-    CAR_WASH_STYLES
+    CAR_WASH_STYLES, FISH_SPECIES_LIST
 )
 
 # 分離した数値スケール判定モジュール
@@ -68,7 +68,8 @@ def detect_semantic_family(term: str) -> Optional[Tuple[str, List[str]]]:
         ("appliance", APPLIANCES_LIST),
         ("health_drink", HEALTH_DRINKS),
         ("mental_trait", MENTAL_TRAITS),
-        ("car_wash", CAR_WASH_STYLES)
+        ("car_wash", CAR_WASH_STYLES),
+        ("fish", FISH_SPECIES_LIST)
     ]
 
     for cat_name, cat_list in catalogs:

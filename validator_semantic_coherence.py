@@ -32,6 +32,17 @@ STAIN_CLEANING_SUFFIXES = [
     "油汚れ", "手垢", "臭い", "ホコリ", "埃", "毛玉", "泥汚れ", "茶渋", "黒カビ"
 ]
 
+# 動作・行為系動詞サフィックス（属性: アクション・日常動作）
+VERB_ACTION_SUFFIXES = [
+    "食べる", "飲む", "寝る", "行く", "走る", "使う", "買う", "洗う", "育てる", "釣る"
+]
+
+# 生物・魚・食材系単語（機械工作語との衝突防止用）
+LIVING_FOOD_ENTITIES = [
+    "シーバス", "スズキ", "ブラックバス", "ボラ", "アジ", "サバ", "タイ", "ヒラメ",
+    "魚", "犬", "猫", "赤ちゃん", "子ども", "リンゴ", "トマト", "肉", "野菜"
+]
+
 # ハウツー・動作系サフィックス（属性: 工程・作業）
 HOWTO_ACTION_SUFFIXES = [
     "作り方", "使い方", "始め方", "やり方", "手順", "直し方", "修理", "設定", "接続"
@@ -105,6 +116,26 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
         if any(clean_p == inc or clean_p.startswith(inc) for inc in incoherent_for_stain):
             return True
 
+    # 4. 動作・行為系動詞サフィックスに対する名詞トピック語の結合排除
+    # 例: 「おすすめ 食べる」「やり方 食べる」「初心者 食べる」「始め方 食べる」「持ち物 食べる」
+    if any(s_last == v or s_last.endswith(v) for v in VERB_ACTION_SUFFIXES):
+        incoherent_for_verbs = [
+            "おすすめ", "人気", "ランキング", "初心者", "始め方", "基本",
+            "やり方", "コツ", "手順", "選び方", "道具", "準備", "持ち物",
+            "比較", "マナー", "ルール", "失敗しない", "メリット", "デメリット",
+            "必要なもの", "入門", "評判", "口コミ"
+        ]
+        if any(clean_p == inc or clean_p.startswith(inc) for inc in incoherent_for_verbs):
+            return True
+
+    # 5. 生物・魚・食品に対する機械工作語の結合排除（例: 「シーバス 壊れた」「シーバス 作り方」）
+    p_tokens = clean_p.split()
+    p_first = p_tokens[0] if p_tokens else clean_p
+    if any(p_first == lf or clean_p.startswith(lf) for lf in LIVING_FOOD_ENTITIES):
+        mechanical_junk = ["壊れた", "切れた", "自作", "改造", "作り方", "使い方", "修理", "初期化"]
+        if any(clean_s == mj or clean_s.startswith(mj) for mj in mechanical_junk):
+            return True
+
     # 3. 価格・費用系サフィックスに対するハウツー動詞結合の排除
     # 例: 「やり方 値段」「手順 費用」「コツ 相場」
     if any(s_last == p or s_last.endswith(p) for p in PRICE_COST_SUFFIXES):
@@ -170,6 +201,16 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
             "セスキ", "除光液", "エタノール", "洗剤", "漂白剤", "ワイドハイター",
             "100均", "クリーニング", "時間が経った", "落ちない", "乾いた", "応急処置",
             "綺麗にする", "洗う", "対処", "予防", "コツ", "手順"
+        ]
+
+    # 動作・行為系動詞サフィックスに特化したクラスター候補
+    # （いつ・タイミング ＋ 食べ方・状態 ＋ 状況・対象者 ＋ 疑問・注意点）
+    if any(s_last == v or s_last.endswith(v) for v in VERB_ACTION_SUFFIXES):
+        return [
+            "生で", "皮ごと", "そのまま", "刺身で", "加熱して", "温めて", "冷やして",
+            "美味しく", "朝", "夜", "寝る前", "食前", "食後", "毎日", "いつ",
+            "ダイエット中", "太る", "痩せる", "妊娠中", "子ども", "赤ちゃん",
+            "犬", "猫", "食べ過ぎ", "目安", "量", "効果", "理由", "なぜ", "注意点"
         ]
 
     # それ以外の全ジャンル（釣り、ボーリング、珈琲、ファッション、IT、暮らし等）
