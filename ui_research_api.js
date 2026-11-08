@@ -89,6 +89,10 @@ async function autoGenerateAxes() {
     if (data.axis2 && data.axis2.length > 0) {
       document.getElementById("axis2-input").value = data.axis2.join("\n");
     }
+    if (data.axis3 && data.axis3.length > 0) {
+      const a3El = document.getElementById("axis3-input");
+      if (a3El) a3El.value = data.axis3.join("\n");
+    }
     updateLabels(seed);
     updateMeter();
   } catch (e) {
@@ -115,12 +119,14 @@ async function executeSerpOnly() {
   const seed = document.getElementById("seed-input").value.trim();
   const a1 = document.getElementById("axis1-input").value.split("\n").filter(x => x.trim());
   const a2 = document.getElementById("axis2-input").value.split("\n").filter(x => x.trim());
+  const a3El = document.getElementById("axis3-input");
+  const a3 = a3El ? a3El.value.split("\n").filter(x => x.trim()) : [];
 
   try {
     const res = await fetch("/api/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seed, axis1: a1, axis2: a2, mode: "serp_only" })
+      body: JSON.stringify({ seed, axis1: a1, axis2: a2, axis3: a3, mode: "serp_only" })
     });
     await res.json();
   } catch (e) {
@@ -142,12 +148,14 @@ async function executeBatch() {
   const seed = document.getElementById("seed-input").value.trim();
   const a1 = document.getElementById("axis1-input").value.split("\n").filter(x => x.trim());
   const a2 = document.getElementById("axis2-input").value.split("\n").filter(x => x.trim());
+  const a3El = document.getElementById("axis3-input");
+  const a3 = a3El ? a3El.value.split("\n").filter(x => x.trim()) : [];
 
   try {
     const res = await fetch("/api/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seed, axis1: a1, axis2: a2, mode: "ubersuggest" })
+      body: JSON.stringify({ seed, axis1: a1, axis2: a2, axis3: a3, mode: "ubersuggest" })
     });
     await res.json();
   } catch (e) {

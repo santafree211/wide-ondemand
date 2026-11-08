@@ -53,6 +53,7 @@ def start_research_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     seed = payload.get("seed", "").strip()
     axis1_terms = payload.get("axis1", [])
     axis2_terms = payload.get("axis2", [])
+    axis3_terms = payload.get("axis3", [])
     mode = payload.get("mode", "full")
 
     from generator_ai_expansion import smart_split_seed
@@ -101,6 +102,9 @@ def start_research_job(payload: Dict[str, Any]) -> Dict[str, Any]:
             ct = t.strip()
             if ct: all_kw.add(ct)
         for t in axis2_terms:
+            ct = t.strip()
+            if ct: all_kw.add(ct)
+        for t in axis3_terms:
             ct = t.strip()
             if ct: all_kw.add(ct)
 

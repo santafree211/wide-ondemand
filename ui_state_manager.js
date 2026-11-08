@@ -60,17 +60,20 @@ function saveState() {
   const seedInput = document.getElementById("seed-input");
   const a1Input = document.getElementById("axis1-input");
   const a2Input = document.getElementById("axis2-input");
+  const a3Input = document.getElementById("axis3-input");
   if (!seedInput) return;
 
   const seed = seedInput.value;
   const a1 = a1Input ? a1Input.value : "";
   const a2 = a2Input ? a2Input.value : "";
-  const stateObj = { seed, a1, a2 };
+  const a3 = a3Input ? a3Input.value : "";
+  const stateObj = { seed, a1, a2, a3 };
 
   // 1. ローカルストレージに即時保存
   localStorage.setItem("wide_studio_seed", seed);
   localStorage.setItem("wide_studio_axis1", a1);
   localStorage.setItem("wide_studio_axis2", a2);
+  localStorage.setItem("wide_studio_axis3", a3);
 
   // 2. サーバー側 state.json にも永続保存
   fetch("/api/state", {
@@ -89,6 +92,10 @@ async function loadSavedState() {
       document.getElementById("seed-input").value = state.seed;
       if (state.a1 !== undefined) document.getElementById("axis1-input").value = state.a1;
       if (state.a2 !== undefined) document.getElementById("axis2-input").value = state.a2;
+      if (state.a3 !== undefined) {
+        const a3El = document.getElementById("axis3-input");
+        if (a3El) a3El.value = state.a3;
+      }
       updateLabels(state.seed);
       updateMeter();
       return true;
@@ -101,8 +108,13 @@ async function loadSavedState() {
     document.getElementById("seed-input").value = savedSeed;
     const savedA1 = localStorage.getItem("wide_studio_axis1");
     const savedA2 = localStorage.getItem("wide_studio_axis2");
+    const savedA3 = localStorage.getItem("wide_studio_axis3");
     if (savedA1 !== null) document.getElementById("axis1-input").value = savedA1;
     if (savedA2 !== null) document.getElementById("axis2-input").value = savedA2;
+    if (savedA3 !== null) {
+      const a3El = document.getElementById("axis3-input");
+      if (a3El) a3El.value = savedA3;
+    }
     updateLabels(savedSeed);
     updateMeter();
     return true;
@@ -129,12 +141,14 @@ function updateMeter() {
   const seedInput = document.getElementById("seed-input");
   const a1Input = document.getElementById("axis1-input");
   const a2Input = document.getElementById("axis2-input");
+  const a3Input = document.getElementById("axis3-input");
   if (!seedInput || !a1Input || !a2Input) return;
 
   const seed = seedInput.value.trim();
   updateLabels(seed);
   const a1 = a1Input.value.split("\n").filter(x => x.trim().length > 0);
   const a2 = a2Input.value.split("\n").filter(x => x.trim().length > 0);
+  const a3 = a3Input ? a3Input.value.split("\n").filter(x => x.trim().length > 0) : [];
 
   const { a: slotA, b: slotB } = smartSplit(seed);
 
@@ -153,6 +167,10 @@ function updateMeter() {
     if (cleanT.endsWith(slotB)) set.add(cleanT);
     else if (slotB) set.add(`${cleanT} ${slotB}`);
     else set.add(cleanT);
+  });
+  a3.forEach(t => {
+    const cleanT = t.trim();
+    if (cleanT) set.add(cleanT);
   });
 
   const count = set.size;
