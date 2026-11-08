@@ -26,6 +26,12 @@ ADJECTIVE_STATE_SUFFIXES = [
     "怖い", "つらい", "だるい", "臭い", "危ない", "めんどくさい", "動かない"
 ]
 
+# 除去・清掃・トラブル対象サフィックス（属性: 汚れ・付着・被害）
+STAIN_CLEANING_SUFFIXES = [
+    "汚れ", "シミ", "カビ", "黄ばみ", "黒ずみ", "水垢", "サビ", "コゲ",
+    "油汚れ", "手垢", "臭い", "ホコリ", "埃", "毛玉", "泥汚れ", "茶渋", "黒カビ"
+]
+
 # ハウツー・動作系サフィックス（属性: 工程・作業）
 HOWTO_ACTION_SUFFIXES = [
     "作り方", "使い方", "始め方", "やり方", "手順", "直し方", "修理", "設定", "接続"
@@ -88,6 +94,17 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
         if any(clean_p == inc or clean_p.startswith(inc) for inc in incoherent_for_adj):
             return True
 
+    # 3. 除去・清掃・トラブル対象サフィックスに対するポジティブ・能動語の結合排除
+    # 例: 「おすすめ 汚れ」「始め方 汚れ」「マナー 汚れ」「メリット 汚れ」「選び方 汚れ」
+    if any(s_last == st or s_last.endswith(st) for st in STAIN_CLEANING_SUFFIXES):
+        incoherent_for_stain = [
+            "おすすめ", "人気", "ランキング", "始め方", "初心者", "基本",
+            "メリット", "デメリット", "マナー", "ルール", "選び方", "持ち物",
+            "準備", "比較", "道具", "入門"
+        ]
+        if any(clean_p == inc or clean_p.startswith(inc) for inc in incoherent_for_stain):
+            return True
+
     # 3. 価格・費用系サフィックスに対するハウツー動詞結合の排除
     # 例: 「やり方 値段」「手順 費用」「コツ 相場」
     if any(s_last == p or s_last.endswith(p) for p in PRICE_COST_SUFFIXES):
@@ -142,6 +159,17 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
             "体調", "頭", "お腹", "喉", "会社", "上司", "職場", "旦那", "夫", "妻",
             "彼氏", "彼女", "態度", "行動", "話", "自分", "原因", "理由", "対処法",
             "直し方", "サイン", "初期症状", "相談", "違和感"
+        ]
+
+    # 除去・清掃・トラブル対象サフィックスに特化したクラスター候補
+    # （落とし方・対処 ＋ 除去アイテム ＋ 付着した素材・場所 ＋ 落ちない状況）
+    if any(s_last == st or s_last.endswith(st) for st in STAIN_CLEANING_SUFFIXES):
+        return [
+            "落とし方", "消し方", "落とす方法", "服", "シャツ", "白シャツ", "手",
+            "壁紙", "床", "革", "オキシクリーン", "ウタマロ", "重曹", "クエン酸",
+            "セスキ", "除光液", "エタノール", "洗剤", "漂白剤", "ワイドハイター",
+            "100均", "クリーニング", "時間が経った", "落ちない", "乾いた", "応急処置",
+            "綺麗にする", "洗う", "対処", "予防", "コツ", "手順"
         ]
 
     # それ以外の全ジャンル（釣り、ボーリング、珈琲、ファッション、IT、暮らし等）

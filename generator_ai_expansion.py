@@ -23,6 +23,7 @@ import re
 from typing import Dict, List, Any, Tuple
 from expansion_strategy_2word import generate_2word_axes
 from expansion_strategy_3word import generate_3word_axes
+from validator_pre_output import run_pre_output_validation
 
 KNOWN_SUFFIXES = [
     "100均", "ダイソー", "セリア", "キャンドゥ", "ワッツ",
@@ -74,12 +75,15 @@ def generate_axes(seed: str) -> Dict[str, Any]:
                 break
 
     if len(tokens) >= 3:
-        return generate_3word_axes(tokens, clean_seed)
+        raw_res = generate_3word_axes(tokens, clean_seed)
     elif len(tokens) == 2:
-        return generate_2word_axes(tokens, clean_seed)
+        raw_res = generate_2word_axes(tokens, clean_seed)
     else:
         # 1語のみの場合のフォールバック
-        return generate_2word_axes([tokens[0], "おすすめ"], clean_seed)
+        raw_res = generate_2word_axes([tokens[0], "おすすめ"], clean_seed)
+
+    # 出力直前の完全自動検証＆修復プロセス（Pre-Output Quality Gate）
+    return run_pre_output_validation(raw_res)
 
 if __name__ == "__main__":
     import sys
