@@ -25,6 +25,7 @@ from domain_attr_gourmet import match_domain_gourmet, is_incoherent_gourmet, get
 from domain_attr_health import match_domain_health, is_incoherent_health, get_fallback_health_prefixes
 from domain_attr_gadget import match_domain_gadget, is_incoherent_gadget, get_fallback_gadget_prefixes
 from domain_attr_procedure import match_domain_procedure, is_incoherent_procedure, get_fallback_procedure_prefixes
+from domain_attr_relationship import match_domain_relationship, is_incoherent_relationship, get_fallback_relationship_prefixes
 
 def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
     """
@@ -91,6 +92,11 @@ def is_semantically_incoherent(prefix: str, suffix: str) -> bool:
         if is_incoherent_procedure(clean_p, clean_s):
             return True
 
+    # 12. ⑩ 恋愛・人間関係・対人心理系属性モジュールによる排除判定
+    if match_domain_relationship(clean_s):
+        if is_incoherent_relationship(clean_p, clean_s):
+            return True
+
     # 7. 文法・品詞的なゴミ（英語の文法用語、活用形崩れ等）の排除
     grammatical_junk = ["英語", "意味", "とは", "画像", "wiki", "一覧", "例文", "類語"]
     if clean_p in grammatical_junk:
@@ -142,6 +148,10 @@ def get_fallback_prefixes_for_suffix(suffix: str) -> List[str]:
     # ⑨ 制度・手続き・学習系の場合
     if match_domain_procedure(clean_s):
         return get_fallback_procedure_prefixes()
+
+    # ⑩ 恋愛・人間関係・対人心理系の場合
+    if match_domain_relationship(clean_s):
+        return get_fallback_relationship_prefixes()
 
     # デフォルト（道具・製品・一般対象）
     return [
