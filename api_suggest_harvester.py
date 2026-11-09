@@ -5,12 +5,13 @@
 ■ モジュール名: api_suggest_harvester.py
 ■ カテゴリ: API / Googleサジェスト実測キーワード・ハーベスター（高速並列版）
 ■ 責務・役割（Single Responsibility）:
-  - AIやシステムによる作為的な単語合成（マナー、持ち物等の強制結合）を完全根絶。
-  - GoogleサジェストAPIをThreadPoolExecutorで高速並列走査（1〜2秒完結）し、
-    人間が実際に検索している生キーワードのみを各軸25件収集する。
+  - 軸①（前固定）: GoogleサジェストAPIを並列走査し、実需のある生クエリを25件収集。
+  - 軸②（後固定）: LLMによる動的カテゴリ推論 ＋ Google実需並列検証で、
+    文字ハック（a ブランド、か ブランド等）のゴミを100%根絶し、実在クエリのみを25件収集。
 ==============================================================================
 """
 
+import re
 from typing import List, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from api_suggest_client import fetch_search_suggestions
@@ -19,8 +20,8 @@ from engine_semantic_family import detect_semantic_family, detect_scale_family
 from engine_context_harmonizer import (
     analyze_seed_context, get_harmonized_axis2_entities, is_contextually_incoherent
 )
+from engine_gemini_client import infer_related_entities_via_gemini
 
-# 走査文字インデックス（代表文字＋アルファベット）
 FAST_CHARS = [
     "", "あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ",
     "さ", "し", "す", "せ", "そ", "た", "ち", "つ", "て", "と",
@@ -28,15 +29,31 @@ FAST_CHARS = [
     "a", "b", "c", "d", "e", "f", "g", "h", "i", "m", "p", "r", "s", "t"
 ]
 
+def is_noise_axis2_term(kw: str, suffix: str) -> bool:
+    """軸②における頭文字・単語断片ノイズ（a ブランド、か ブランド等）を判定"""
+    clean_kw = re.sub(r'[\s\u3000]+', ' ', kw).strip()
+    clean_s = suffix.strip()
+    if not clean_kw.endswith(clean_s):
+        return True
+    prefix_part = clean_kw[:-len(clean_s)].strip()
+    if not prefix_part:
+        return True
+    tokens = prefix_part.split()
+    # 最後の前置単語が1文字以下の場合はノイズ
+    if len(tokens[-1]) <= 1:
+        return True
+    # 記号（ü, ., 英語1文字など）の混入
+    if re.search(r'[üäö\.]|^[a-zA-Z]$', prefix_part):
+        return True
+    return False
+
 def harvest_axis1_prefix_suggestions(
     prefix: str,
     suffix_context: str = "",
     exclude_seed: str = "",
     target_count: int = 25
 ) -> List[str]:
-    """
-    軸①用: [prefix] 〇〇 (前固定) の本物のGoogleサジェストキーワードを高速並列走査・収集する。
-    """
+    """軸①用: [prefix] 〇〇 (前固定) の本物のGoogleサジェストキーワードを収集"""
     clean_p = prefix.strip()
     clean_seed = exclude_seed.strip()
     if not clean_p:
@@ -46,7 +63,7 @@ def harvest_axis1_prefix_suggestions(
     seen: Set[str] = set()
     context_info = analyze_seed_context(clean_p, suffix_context) if suffix_context else None
 
-    # Step 1: まずプレフィックス単体のサジェストを取得
+    # Step 1: プレフィックス単体サジェスト
     base_suggs = fetch_search_suggestions(f"{clean_p} ")
     for s in base_suggs:
         item = s.strip()
@@ -64,7 +81,7 @@ def harvest_axis1_prefix_suggestions(
     if len(collected) >= target_count:
         return collected[:target_count]
 
-    # Step 2: 並列走査で不足分を高速取得
+    # Step 2: 並列走査
     queries = [f"{clean_p} {ch}".strip() for ch in FAST_CHARS if ch]
     with ThreadPoolExecutor(max_workers=8) as executor:
         future_map = {executor.submit(fetch_search_suggestions, q): q for q in queries}
@@ -96,9 +113,7 @@ def harvest_axis2_suffix_suggestions(
     exclude_seed: str = "",
     target_count: int = 25
 ) -> List[str]:
-    """
-    軸②用: 〇〇 [suffix] (後固定) の本物のGoogleサジェストキーワードを高速並列走査・収集する。
-    """
+    """軸②用: 〇〇 [suffix] (後固定) をLLM推論 ＋ Google実需照合で収集"""
     clean_s = suffix.strip()
     clean_seed = exclude_seed.strip()
     clean_entity = seed_entity.strip()
@@ -107,28 +122,58 @@ def harvest_axis2_suffix_suggestions(
 
     collected: List[str] = []
     seen: Set[str] = set()
-    suffix_tokens = clean_s.split()
 
-    # Priority 1: 同族エンティティ（ウイスキー、魚、号数、色等）を並列検証
+    # Step 1: LLM（Gemini）による動的同族・競合・関連アイテム推論
     candidates = []
     if clean_entity:
+        ai_entities = infer_related_entities_via_gemini(clean_entity, clean_s)
+        if ai_entities:
+            candidates.extend(ai_entities)
+
+    # Step 2: セマンティックカタログ（静的同族: ウイスキー、号数、色等）
+    if clean_entity:
         context_info = analyze_seed_context(clean_entity, clean_s)
-        candidates = get_harmonized_axis2_entities(context_info)
-        if not candidates:
+        cat_entities = get_harmonized_axis2_entities(context_info)
+        if cat_entities:
+            candidates.extend(cat_entities)
+        else:
             fam = detect_semantic_family(clean_entity) or detect_scale_family(clean_entity)
             if fam:
-                _, candidates = fam
+                _, fam_cands = fam
+                candidates.extend(fam_cands)
 
-    if candidates:
-        cand_queries = [f"{m} {clean_s}" for m in candidates if f"{m} {clean_s}" != clean_seed]
+    # Step 3: 軸①（前固定）の実在サジェストからのアイテム抽出
+    if clean_entity:
+        try:
+            base_suggs = fetch_search_suggestions(f"{clean_entity} ")
+            for bs in base_suggs:
+                bs_clean = bs.strip()
+                if bs_clean.startswith(clean_entity):
+                    sub = bs_clean[len(clean_entity):].strip()
+                    if sub and len(sub) >= 2 and not is_prohibited_term(sub):
+                        candidates.append(f"{clean_entity}{sub}")
+                        candidates.append(sub)
+        except Exception:
+            pass
+
+    # 重複除去した候補群をGoogleサジェストで高速並列検証
+    unique_cands = []
+    for c in candidates:
+        c_clean = c.strip()
+        if c_clean and c_clean != clean_entity and c_clean not in unique_cands and len(c_clean) >= 2:
+            unique_cands.append(c_clean)
+
+    if unique_cands:
+        cand_queries = [f"{m} {clean_s}" for m in unique_cands if f"{m} {clean_s}" != clean_seed]
         with ThreadPoolExecutor(max_workers=8) as executor:
             future_map = {executor.submit(fetch_search_suggestions, cq): cq for cq in cand_queries}
             for future in as_completed(future_map):
                 cq = future_map[future]
                 try:
                     suggs = future.result()
-                    if suggs: # Googleで実在する検索と認定
-                        if cq not in seen and not is_prohibited_term(cq):
+                    # Googleで実在し、かつノイズでないものを採用
+                    if suggs and not is_noise_axis2_term(cq, clean_s) and not is_prohibited_term(cq):
+                        if cq not in seen:
                             seen.add(cq)
                             collected.append(cq)
                 except Exception:
@@ -136,9 +181,9 @@ def harvest_axis2_suffix_suggestions(
                 if len(collected) >= target_count:
                     return collected[:target_count]
 
-    # Priority 2: Suffixの並列走査で実在する前置クエリを収集
+    # Step 4: Suffix自体の自然な前置サジェスト（断片ノイズは完全遮断）
     if len(collected) < target_count:
-        queries = [f"{clean_s} {ch}".strip() for ch in FAST_CHARS]
+        queries = [f"{clean_s} {ch}".strip() for ch in FAST_CHARS[:15]]
         with ThreadPoolExecutor(max_workers=8) as executor:
             future_map = {executor.submit(fetch_search_suggestions, q): q for q in queries}
             for future in as_completed(future_map):
@@ -149,44 +194,11 @@ def harvest_axis2_suffix_suggestions(
                         if not item or item == clean_s or item == clean_seed or is_prohibited_term(item):
                             continue
                         tokens = item.split()
-                        if len(suffix_tokens) == 1:
-                            if len(tokens) >= 2 and tokens[-1] == suffix_tokens[0]:
-                                norm = " ".join(tokens)
-                                if norm not in seen and norm != clean_seed:
-                                    seen.add(norm)
-                                    collected.append(norm)
-                        else:
-                            # 2語以上サフィックス（例: レシピ フライパン）
-                            for i in range(len(tokens) - len(suffix_tokens) + 1):
-                                if tokens[i:i + len(suffix_tokens)] == suffix_tokens and i > 0:
-                                    p_part = " ".join(tokens[:i])
-                                    norm = f"{p_part} {clean_s}"
-                                    if norm not in seen and not is_prohibited_term(norm) and norm != clean_seed:
-                                        seen.add(norm)
-                                        collected.append(norm)
-                                    break
-                except Exception:
-                    pass
-                if len(collected) >= target_count:
-                    break
-
-    # Priority 3: 前置文字並列走査
-    if len(collected) < target_count:
-        queries = [f"{ch} {clean_s}" for ch in FAST_CHARS if ch]
-        with ThreadPoolExecutor(max_workers=8) as executor:
-            future_map = {executor.submit(fetch_search_suggestions, q): q for q in queries}
-            for future in as_completed(future_map):
-                try:
-                    suggs = future.result()
-                    for s in suggs:
-                        item = s.strip()
-                        if not item or item == clean_s or item == clean_seed or is_prohibited_term(item):
-                            continue
-                        tokens = item.split()
-                        if len(tokens) >= 2 and item.endswith(clean_s):
-                            if item not in seen and item != clean_seed:
-                                seen.add(item)
-                                collected.append(item)
+                        if len(tokens) >= 2 and tokens[-1] == clean_s:
+                            norm = " ".join(tokens)
+                            if not is_noise_axis2_term(norm, clean_s) and norm not in seen:
+                                seen.add(norm)
+                                collected.append(norm)
                 except Exception:
                     pass
                 if len(collected) >= target_count:
