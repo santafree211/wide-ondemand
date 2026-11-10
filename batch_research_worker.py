@@ -69,8 +69,8 @@ def run_batch_research(query_file: str):
         except Exception:
             pass
 
-    # 前回の結果を完全に分離（今回の対象キーワードはDB内の古い判定を引き継がず新規実測）
-    existing_items = {it.get("keyword"): it for it in db.get("keywords", []) if it.get("keyword") not in keywords}
+    # 既存DBレコード（既知判定の引き継ぎ・レジューム用）
+    existing_items = {it.get("keyword"): it for it in db.get("keywords", []) if it.get("keyword")}
 
     # mode == "ubersuggest" (500KW/1API メガバッチ一括実行モード)
     if q_data.get("mode") == "ubersuggest":
@@ -101,20 +101,30 @@ def run_batch_research(query_file: str):
 
     # mode == "serp_only" の場合（Google公式SERP星判定ループ）
     for i, kw in enumerate(keywords, 1):
+        item_entry = existing_items.get(kw)
+        # すでに星判定（SERP結果）が取得済みの場合は即座にスキップ（レジューム機能・キャッシュ活用）
+        if item_entry and item_entry.get("da_meta") and item_entry.get("star_rating") is not None and item_entry.get("star_rating") != "":
+            stars = item_entry.get("star_rating", "-")
+            msg_skip = f"[{i}/{total}] ⏩ 判定済のためスキップ: '{kw}' ({stars})"
+            update_progress("RUNNING", i, total, kw, msg_skip)
+            time.sleep(0.05)
+            continue
+
         msg = f"[{i}/{total}] Google公式SERP星判定中: '{kw}'"
         update_progress("RUNNING", i, total, kw, msg)
 
-        item_entry = existing_items.get(kw, {
-            "keyword": kw,
-            "seed_keyword": seed,
-            "expansion_type": "MEGA_BATCH",
-            "volume": None,
-            "sd": None,
-            "star_rating": "-",
-            "search_intent": "",
-            "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")
-        })
+        if not item_entry:
+            item_entry = {
+                "keyword": kw,
+                "seed_keyword": seed,
+                "expansion_type": "MEGA_BATCH",
+                "volume": None,
+                "sd": None,
+                "star_rating": "-",
+                "search_intent": "",
+                "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")
+            }
 
         # STEP 1: Google公式実測SERPによる星（ライバルの弱さ）の判定
         stars, meta = evaluate_keyword_stars(kw, token=token)

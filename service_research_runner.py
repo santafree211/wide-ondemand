@@ -117,33 +117,11 @@ def start_research_job(payload: Dict[str, Any]) -> Dict[str, Any]:
         "keywords": sorted(list(all_kw))
     }
 
+    # クエリJSONを作成
     with open(QUERY_FILE, "w", encoding="utf-8") as f:
         json.dump(q_data, f, ensure_ascii=False, indent=2)
 
-    # 前回の結果をクリア（SERP実行時のみクリア。Ubersuggest実行時は直前の星判定結果を活かしてVolを更新する）
-    if mode != "ubersuggest":
-        norm_seed = seed.replace(" ", "").replace("　", "")
-        if DB_FILE.exists():
-            try:
-                with open(DB_FILE, "r", encoding="utf-8-sig") as f:
-                    raw = json.load(f)
-                retained = []
-                for it in raw.get("keywords", []):
-                    it_seed = it.get("seed_keyword", "").replace(" ", "").replace("　", "")
-                    it_kw = it.get("keyword", "")
-                    if norm_seed and (norm_seed == it_seed or norm_seed in it_seed or it_seed in norm_seed):
-                        continue
-                    if it_kw in all_kw:
-                        continue
-                    retained.append(it)
-                raw["keywords"] = retained
-                raw["updated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-                with open(DB_FILE, "w", encoding="utf-8") as f:
-                    json.dump(raw, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                print("Error clearing previous results:", e)
-
-    # バックグラウンドリサーチワーカーを実行
+    # バックグラウンドリサーチワーカーを実行（既存結果は消去せず保持し、ワーカー側でスキップ・レジューム）
     worker_py = WIDE_DIR / "batch_research_worker.py"
     cmd = [
         sys.executable,
