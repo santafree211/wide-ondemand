@@ -95,18 +95,12 @@ def start_research_job(payload: Dict[str, Any]) -> Dict[str, Any]:
             except Exception as e:
                 print("Error reading starred keywords from db:", e)
     else:
-        if seed: all_kw.add(seed)
-        if slot_a: all_kw.add(slot_a)
-        if slot_b: all_kw.add(slot_b)
-        for t in axis1_terms:
-            ct = t.strip()
-            if ct: all_kw.add(ct)
-        for t in axis2_terms:
-            ct = t.strip()
-            if ct: all_kw.add(ct)
-        for t in axis3_terms:
-            ct = t.strip()
-            if ct: all_kw.add(ct)
+        import re
+        norm_seed = re.sub(r'[\s\u3000]+', ' ', seed).strip().lower()
+        for t in axis1_terms + axis2_terms + axis3_terms:
+            ct = re.sub(r'[\s\u3000]+', ' ', t).strip()
+            if ct and ct.lower() != norm_seed:
+                all_kw.add(ct)
 
     q_data = {
         "mode": mode,

@@ -49,8 +49,11 @@ def run_batch_research(query_file: str):
     with open(q_path, "r", encoding="utf-8") as f:
         q_data = json.load(f)
 
-    keywords = q_data.get("keywords", [])
-    seed = q_data.get("seed_keyword", "")
+    import re
+    seed = q_data.get("seed_keyword", "").strip()
+    norm_seed = re.sub(r'[\s\u3000]+', ' ', seed).strip().lower()
+    raw_keywords = q_data.get("keywords", [])
+    keywords = [k for k in raw_keywords if re.sub(r'[\s\u3000]+', ' ', k).strip().lower() != norm_seed]
     total = len(keywords)
 
     if total == 0:
