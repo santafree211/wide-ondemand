@@ -183,7 +183,9 @@ def harvest_axis2_suffix_suggestions(
 
     # Step 4: Suffix自体の自然な前置サジェスト（断片ノイズは完全遮断）
     if len(collected) < target_count:
-        queries = [f"{clean_s} {ch}".strip() for ch in FAST_CHARS[:15]]
+        suffix_tokens = clean_s.split()
+        s_len = len(suffix_tokens)
+        queries = [f"{clean_s} {ch}".strip() for ch in FAST_CHARS[:20]]
         with ThreadPoolExecutor(max_workers=8) as executor:
             future_map = {executor.submit(fetch_search_suggestions, q): q for q in queries}
             for future in as_completed(future_map):
@@ -194,11 +196,19 @@ def harvest_axis2_suffix_suggestions(
                         if not item or item == clean_s or item == clean_seed or is_prohibited_term(item):
                             continue
                         tokens = item.split()
-                        if len(tokens) >= 2 and tokens[-1] == clean_s:
-                            norm = " ".join(tokens)
-                            if not is_noise_axis2_term(norm, clean_s) and norm not in seen:
-                                seen.add(norm)
-                                collected.append(norm)
+                        if len(tokens) > s_len:
+                            if tokens[-s_len:] == suffix_tokens:
+                                p_part = " ".join(tokens[:-s_len])
+                                norm = f"{p_part} {clean_s}"
+                                if not is_noise_axis2_term(norm, clean_s) and norm not in seen and norm != clean_seed:
+                                    seen.add(norm)
+                                    collected.append(norm)
+                            elif tokens[:s_len] == suffix_tokens:
+                                p_part = " ".join(tokens[s_len:])
+                                norm = f"{p_part} {clean_s}"
+                                if not is_noise_axis2_term(norm, clean_s) and norm not in seen and norm != clean_seed:
+                                    seen.add(norm)
+                                    collected.append(norm)
                 except Exception:
                     pass
                 if len(collected) >= target_count:
