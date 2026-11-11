@@ -15,6 +15,7 @@
 
 from typing import Dict, List, Any, Optional
 from engine_semantic_family import detect_semantic_family
+from dict_semantic_catalog import POPULAR_SONGS, MUSIC_INSTRUMENTS
 
 # 飲食・食味・調理系サフィックス群
 COOKING_INTENTS = [
@@ -34,6 +35,11 @@ CLEANING_INTENTS = [
 # トラブル・不調系サフィックス群
 TROUBLE_INTENTS = [
     "おかしい", "変", "動かない", "壊れた", "エラー", "重い", "遅い", "原因", "対処法"
+]
+
+# 音楽・演奏・楽曲系サフィックス群
+MUSIC_INTENTS = [
+    "コード", "歌詞", "音域", "楽譜", "tab", "ピアノ", "ギター", "ウクレレ", "アコギ", "キー", "テンポ", "伴奏"
 ]
 
 def analyze_seed_context(slot_a: str, slot_b: str) -> Dict[str, Any]:
@@ -57,6 +63,8 @@ def analyze_seed_context(slot_a: str, slot_b: str) -> Dict[str, Any]:
         intent_b = "cleaning_removal"
     elif any(clean_b == tr or clean_b.endswith(tr) for tr in TROUBLE_INTENTS):
         intent_b = "trouble_fault"
+    elif any(clean_b.lower() == mu or clean_b.lower().endswith(mu) for mu in MUSIC_INTENTS):
+        intent_b = "music_performance"
 
     # 3. 共通テーマ（コンテキスト）の決定
     combined_context = f"{domain_a}_{intent_b}"
@@ -120,6 +128,10 @@ def get_harmonized_axis1_terms(context_info: Dict[str, Any]) -> List[str]:
             "ウタマロ", "重曹", "除光液", "エタノール", "時間が経った", "落ちない"
         ]
 
+    # 音楽・楽曲系（コード、歌詞、楽譜等）の場合の同族ヒット曲・楽器リスト
+    if context_info["intent_b"] == "music_performance" or context_info["domain_a"] == "song":
+        return list(POPULAR_SONGS) + list(MUSIC_INSTRUMENTS)
+
     return []
 
 def get_harmonized_axis2_entities(context_info: Dict[str, Any]) -> List[str]:
@@ -138,5 +150,9 @@ def get_harmonized_axis2_entities(context_info: Dict[str, Any]) -> List[str]:
             "食べこぼし", "コーヒー", "醤油", "ボールペン", "ファンデーション",
             "ワイン", "ヤニ", "水垢", "茶渋", "黒カビ"
         ]
+
+    # 音楽・楽曲系（コード、歌詞、楽譜等）の場合の同族ヒット曲・楽器リスト
+    if context_info["intent_b"] == "music_performance" or context_info["domain_a"] == "song":
+        return list(POPULAR_SONGS) + list(MUSIC_INSTRUMENTS)
 
     return []

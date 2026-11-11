@@ -83,18 +83,13 @@ async function autoGenerateAxes() {
   try {
     const res = await fetch(`/api/expand?seed=${encodeURIComponent(seed)}`);
     const data = await res.json();
-    if (data.axis1 && data.axis1.length > 0) {
-      document.getElementById("axis1-input").value = data.axis1.join("\n");
-    }
-    if (data.axis2 && data.axis2.length > 0) {
-      document.getElementById("axis2-input").value = data.axis2.join("\n");
-    }
-    if (data.axis3 && data.axis3.length > 0) {
-      const a3El = document.getElementById("axis3-input");
-      if (a3El) a3El.value = data.axis3.join("\n");
-    }
+    document.getElementById("axis1-input").value = (data.axis1 || []).join("\n");
+    document.getElementById("axis2-input").value = (data.axis2 || []).join("\n");
+    const a3El = document.getElementById("axis3-input");
+    if (a3El) a3El.value = (data.axis3 || []).join("\n");
     updateLabels(seed);
     updateMeter();
+    if (typeof saveState === "function") saveState();
   } catch (e) {
     console.error("Expand error:", e);
   } finally {

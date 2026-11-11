@@ -27,7 +27,7 @@ from dict_semantic_catalog import (
     COOKING_APPLIANCES, APP_GENRES, DISHES_LIST, SEASONINGS_LIST,
     HARDWARE_PARTS, APPLIANCES_LIST, HEALTH_DRINKS, MENTAL_TRAITS,
     CAR_WASH_STYLES, FISH_SPECIES_LIST, WHISKY_LIST, OUTDOOR_ACTIVITIES,
-    FURNITURE_SHOPS
+    FURNITURE_SHOPS, POPULAR_SONGS, MUSIC_INSTRUMENTS
 )
 
 # 分離した数値スケール判定モジュール
@@ -73,7 +73,9 @@ def detect_semantic_family(term: str) -> Optional[Tuple[str, List[str]]]:
         ("fish", FISH_SPECIES_LIST),
         ("whisky", WHISKY_LIST),
         ("outdoor", OUTDOOR_ACTIVITIES),
-        ("furniture_shop", FURNITURE_SHOPS)
+        ("furniture_shop", FURNITURE_SHOPS),
+        ("song", POPULAR_SONGS),
+        ("music_inst", MUSIC_INSTRUMENTS)
     ]
 
     # 3. 各種意味カテゴリの照合
